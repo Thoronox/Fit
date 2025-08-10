@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "WorkoutGeneratorService.requestWorkoutFromAI(prompt:):AIWorkoutGenerator.swift">
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in WorkoutView.body.getter:WorkoutView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "currentWorkout">
+            </PersistentString>
+            <PersistentString
+               value = "currentWorkout.exercises[0]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in ExerciseExecutionView.body.getter:ExerciseExecutionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "workoutExercise.restTime">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>
