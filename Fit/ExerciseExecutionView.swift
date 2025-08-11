@@ -13,7 +13,7 @@ struct ExerciseExecutionView: View {
         var reps: String
         var weight: String
         var isCompleted: Bool
-        let setNumber: Int
+        var setNumber: Int
     }
 
     fileprivate enum Field: Hashable {
@@ -78,43 +78,51 @@ struct ExerciseExecutionView: View {
     }
 
     private var setsScroll: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                // Header Row
-                HStack {
-                    Text("")
-                        .frame(width: 10)
+        VStack(spacing: 0) {
+            // Header Row
+            HStack {
+                Text("")
+                    .frame(width: 10)
 
-                    VStack {
-                        Text("Reps")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text("Per Leg")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-
-                    VStack {
-                        Text("Weight (kg)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text("Per Arm")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
+                VStack {
+                    Text("Reps")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
-                .padding(.horizontal)
+                .frame(maxWidth: .infinity)
 
-                // Set Rows
+                VStack {
+                    Text("Weight (kg)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
+            // Sets List
+            List {
                 ForEach($setInputs.indices, id: \.self) { index in
                     SetRowView(
                         input: $setInputs[index],
                         index: index,
-                        focusedField: $focusedField
+                        focusedField: $focusedField,
+                        onRepsChange: { newValue in
+                            propagateRepsToBelow(fromIndex: index, value: newValue)
+                        },
+                        onWeightChange: { newValue in
+                            propagateWeightToBelow(fromIndex: index, value: newValue)
+                        }
                     )
-                    .padding(.horizontal)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing) {
+                        Button("Delete") {
+                            deleteSet(at: index)
+                        }
+                        .tint(.red)
+                    }
                 }
 
                 // Add Set Button
@@ -127,8 +135,13 @@ struct ExerciseExecutionView: View {
                     }
                     .foregroundColor(.red)
                 }
-                .padding()
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .padding(.vertical, 8)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
         }
     }
 
@@ -145,7 +158,6 @@ struct ExerciseExecutionView: View {
 
             Button("Log Set & Next Exercise") {
                 logCurrentSet()
-                showPauseTimer = true
             }
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(Color.red)
@@ -188,6 +200,58 @@ struct ExerciseExecutionView: View {
         setInputs.append(newInput)
     }
 
+    private func deleteSet(at index: Int) {
+        // Don't allow deleting if there's only one set
+        guard setInputs.count > 1, index < setInputs.count else { return }
+        
+        // Remove from both the UI state and the data model
+        setInputs.remove(at: index)
+        
+        if index < workoutExercise.sets.count {
+            workoutExercise.sets.remove(at: index)
+        }
+        
+        // Update set numbers for remaining sets
+        for (newIndex, _) in setInputs.enumerated() {
+            setInputs[newIndex].setNumber = newIndex + 1
+            if newIndex < workoutExercise.sets.count {
+                workoutExercise.sets[newIndex].setNumber = newIndex + 1
+            }
+        }
+        
+        // Adjust currentSetIndex if necessary
+        if currentSetIndex >= setInputs.count {
+            currentSetIndex = max(0, setInputs.count - 1)
+        }
+        
+        // Find the next incomplete set
+        if let nextIncompleteIndex = setInputs.firstIndex(where: { !$0.isCompleted }) {
+            currentSetIndex = nextIncompleteIndex
+        }
+    }
+
+    // MARK: - Propagation Methods
+    
+    private func propagateRepsToBelow(fromIndex: Int, value: String) {
+        guard fromIndex < setInputs.count else { return }
+        
+        for index in (fromIndex + 1)..<setInputs.count {
+            if !setInputs[index].isCompleted {
+                setInputs[index].reps = value
+            }
+        }
+    }
+    
+    private func propagateWeightToBelow(fromIndex: Int, value: String) {
+        guard fromIndex < setInputs.count else { return }
+        
+        for index in (fromIndex + 1)..<setInputs.count {
+            if !setInputs[index].isCompleted {
+                setInputs[index].weight = value
+            }
+        }
+    }
+
     private func logAllSets() {
         for (index, input) in setInputs.enumerated() {
             guard index < workoutExercise.sets.count else { continue }
@@ -202,7 +266,7 @@ struct ExerciseExecutionView: View {
                 setInputs[index].isCompleted = true
             }
         }
-
+        dismiss()
     }
 
     private func logCurrentSet() {
@@ -221,6 +285,7 @@ struct ExerciseExecutionView: View {
         if currentSetIndex < setInputs.count - 1 {
             currentSetIndex += 1
             focusedField = .reps(index: currentSetIndex)
+            showPauseTimer = true
         } else {
             dismiss()
         }
@@ -233,34 +298,40 @@ fileprivate struct SetRowView: View {
     @Binding var input: ExerciseExecutionView.SetInput
     let index: Int
     @FocusState.Binding var focusedField: ExerciseExecutionView.Field?
+    let onRepsChange: (String) -> Void
+    let onWeightChange: (String) -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             // Set Number
             ZStack {
                 Circle()
-                    .fill(input.isCompleted ? Color.green : Color.gray.opacity(0.3))
+                    .fill(Color.gray.opacity(0.3))
                     .frame(width: 30, height: 30)
 
-                Text("\(index + 1)")
+                Text(input.isCompleted ?  "✓" : "\(index + 1)")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(input.isCompleted ? .black : .white)
+                    .foregroundColor(input.isCompleted ? .green : .white)
             }
 
             // Reps Input
             RepsTextField(
                 text: $input.reps,
                 focusedField: $focusedField,
-                index: index
+                index: index,
+                onChange: onRepsChange
             )
+            .foregroundColor(input.isCompleted ? .green : .white)
 
             // Weight Input
             WeightTextField(
                 text: $input.weight,
                 focusedField: $focusedField,
-                index: index
+                index: index,
+                onChange: onWeightChange
             )
+            .foregroundColor(input.isCompleted ? .green : .white)
         }
     }
 }
@@ -269,12 +340,12 @@ fileprivate struct RepsTextField: View {
     @Binding var text: String
     @FocusState.Binding var focusedField: ExerciseExecutionView.Field?
     let index: Int
+    let onChange: (String) -> Void
 
     var body: some View {
         TextField("6", text: $text)
             .focused($focusedField, equals: .reps(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
-            .foregroundColor(.white)
             .multilineTextAlignment(.center)
             .keyboardType(.numberPad)
             .frame(maxWidth: .infinity, minHeight: 40)
@@ -286,6 +357,9 @@ fileprivate struct RepsTextField: View {
                             .fill(Color.black.opacity(0.3))
                     )
             )
+            .onChange(of: text) { _, newValue in
+                onChange(newValue)
+            }
     }
 }
 
@@ -293,12 +367,12 @@ fileprivate struct WeightTextField: View {
     @Binding var text: String
     @FocusState.Binding var focusedField: ExerciseExecutionView.Field?
     let index: Int
+    let onChange: (String) -> Void
 
     var body: some View {
         TextField("14", text: $text)
             .focused($focusedField, equals: .weight(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
-            .foregroundColor(.white)
             .multilineTextAlignment(.center)
             .keyboardType(.decimalPad)
             .frame(maxWidth: .infinity, minHeight: 40)
@@ -310,6 +384,9 @@ fileprivate struct WeightTextField: View {
                             .fill(Color.black.opacity(0.3))
                     )
             )
+            .onChange(of: text) { _, newValue in
+                onChange(newValue)
+            }
     }
 }
 

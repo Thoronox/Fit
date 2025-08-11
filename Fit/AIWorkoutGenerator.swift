@@ -173,7 +173,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             let exercise = Exercise(
                 name: exerciseData.name,
                 primaryMuscleGroup: muscleGroup,
-                exerciseType: exerciseType,
+                exerciseType: exerciseType
             )
             
             let workoutExercise = WorkoutExercise(exercise: exercise, order: index)
