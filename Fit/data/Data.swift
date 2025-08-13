@@ -119,6 +119,29 @@ class ExerciseSet {
         // Epley formula: 1RM = weight * (1 + reps/30)
         weight * (1 + Double(reps) / 30)
     }
+    
+    // Enhanced 1RM calculation with different methods
+    func oneRepMax(using method: OneRepMaxCalculation = .epley) -> Double {
+        method.calculate(weight: weight, reps: reps)
+    }
+    
+    // Determine if this set is a potential PR
+    var isPotentialPR: Bool {
+        guard let exercise = workoutExercise?.exercise else { return false }
+        // Logic to check if this is better than previous records
+        // This would need access to ModelContext to query existing records
+        return true // Simplified for example
+    }
+    
+    // Quality score for 1RM estimation (lower reps = higher quality for strength)
+    var oneRepMaxQuality: ConfidenceLevel {
+        switch reps {
+        case 1: return .high
+        case 2...5: return .medium
+        case 6...12: return .medium
+        default: return .low
+        }
+    }
 }
 
 // MARK: - Enums and Supporting Types
@@ -214,22 +237,138 @@ class PersonalRecord {
     var reps: Int
     var date: Date
     var workoutExercise: WorkoutExercise?
+    var recordType: RecordType
+    var calculationMethod: OneRepMaxCalculation
     
-    init(exercise: Exercise, weight: Double, reps: Int, date: Date = Date()) {
+    init(exercise: Exercise, weight: Double, reps: Int, date: Date = Date(), recordType: RecordType = .calculated) {
         self.id = UUID()
         self.exercise = exercise
         self.weight = weight
         self.reps = reps
         self.date = date
+        self.recordType = recordType
+        self.calculationMethod = .epley
     }
     
     var oneRepMax: Double {
-        weight * (1 + Double(reps) / 30)
+        calculationMethod.calculate(weight: weight, reps: reps)
     }
 }
 
-// MARK: - User Preferences and Settings
+enum RecordType: String, CaseIterable, Codable {
+    case actual = "Actual" // True 1RM attempt
+    case calculated = "Calculated" // Based on rep performance
+}
 
+enum OneRepMaxCalculation: String, CaseIterable, Codable {
+    case epley = "Epley"
+    case brzycki = "Brzycki"
+    case lombardi = "Lombardi"
+    case mcglothin = "McGlothin"
+    
+    func calculate(weight: Double, reps: Int) -> Double {
+        switch self {
+        case .epley:
+            return weight * (1 + Double(reps) / 30)
+        case .brzycki:
+            return weight * (36 / (37 - Double(reps)))
+        case .lombardi:
+            return weight * pow(Double(reps), 0.10)
+        case .mcglothin:
+            return (100 * weight) / (101.3 - 2.67123 * Double(reps))
+        }
+    }
+}
+
+
+@Model
+class OneRepMaxHistory {
+    var id: UUID
+    @Attribute var exerciseId: UUID? { exercise?.id }
+    var exercise: Exercise?
+    var oneRepMax: Double
+    var date: Date
+    var source: OneRepMaxSource
+    var sourceRecord: PersonalRecord? // Link to the PR that generated this 1RM
+    var calculationMethod: OneRepMaxCalculation
+    var confidence: ConfidenceLevel // How reliable this 1RM estimate is
+    
+    init(exercise: Exercise, oneRepMax: Double, date: Date = Date(), source: OneRepMaxSource, calculationMethod: OneRepMaxCalculation = .epley) {
+        self.id = UUID()
+        self.exercise = exercise
+        self.oneRepMax = oneRepMax
+        self.date = date
+        self.source = source
+        self.calculationMethod = calculationMethod
+        self.confidence = source.defaultConfidence
+    }
+}
+
+enum OneRepMaxSource: String, CaseIterable, Codable {
+    case actualTest = "Actual 1RM Test"
+    case calculatedFromSet = "Calculated from Set"
+    case estimatedFromVolume = "Estimated from Volume"
+    case manualEntry = "Manual Entry"
+    
+    var defaultConfidence: ConfidenceLevel {
+        switch self {
+        case .actualTest: return .high
+        case .calculatedFromSet: return .medium
+        case .estimatedFromVolume: return .low
+        case .manualEntry: return .medium
+        }
+    }
+}
+
+enum ConfidenceLevel: String, CaseIterable, Codable {
+    case high = "High"
+    case medium = "Medium"
+    case low = "Low"
+    
+    var doubleValue: Double {
+        switch self {
+        case .low:
+            return 0.3
+        case .medium:
+            return 0.6
+        case .high:
+            return 1.0
+        // Add other cases as needed based on your ConfidenceLevel definition
+        }
+    }
+}
+
+
+// MARK: - TimeRange Enum
+enum TimeRange: String, CaseIterable {
+    case lastMonth = "Last Month"
+    case lastThreeMonths = "Last 3 Months"
+    case lastSixMonths = "Last 6 Months"
+    case lastYear = "Last Year"
+    case all = "All Time"
+    
+    var displayName: String {
+        return self.rawValue
+    }
+}
+
+// MARK: - OneRepMaxDataPoint Struct
+struct OneRepMaxDataPoint {
+    let date: Date
+    let oneRepMax: Double
+    let confidence: Double
+    let source: OneRepMaxSource
+    
+    init(date: Date, oneRepMax: Double, confidence: Double = 1.0, source: OneRepMaxSource) {
+        self.date = date
+        self.oneRepMax = oneRepMax
+        self.confidence = confidence
+        self.source = source
+    }
+}
+    
+// MARK: - User Preferences and Settings
+ 
 @Model
 class UserProfile {
     var id: UUID
@@ -245,6 +384,20 @@ class UserProfile {
         self.weightUnit = .kg
         self.experienceLevel = .beginner
         self.workoutDaysPerWeek = 3
+    }
+    
+    var preferredOneRepMaxCalculation: OneRepMaxCalculation {
+        get {
+            // Could store this as a property, defaulting to Epley
+            return .epley
+        }
+    }
+    
+    var autoTrackOneRepMax: Bool {
+        get {
+            // Could store this as a property, defaulting to true
+            return true
+        }
     }
 }
 
@@ -288,3 +441,5 @@ extension ClosedRange: Codable where Bound: Codable {
         try container.encode(upperBound, forKey: .upperBound)
     }
 }
+
+

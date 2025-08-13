@@ -1,8 +1,11 @@
 import SwiftUI
 import Foundation
+import SwiftData
 
 // MARK: - Google Gemini AI Workout Generator Service
 class GeminiWorkoutGeneratorService: ObservableObject {
+    @Query var exercises: [Exercise]
+
     @Published var isGenerating = false
     @Published var generatedWorkout: Workout?
     @Published var errorMessage: String?
@@ -28,13 +31,13 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             difficulty: difficulty,
             equipment: equipment
         )
-        
+print (prompt)
         do {
             let workout = try await requestWorkoutFromGemini(prompt: prompt)
-            await MainActor.run {
-                self.generatedWorkout = workout
-                self.isGenerating = false
-            }
+            
+            // Fix: Call MainActor method directly
+            await setGeneratedWorkout(workout)
+            
         } catch {
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
@@ -42,10 +45,20 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             }
         }
     }
+
+    // Helper method to set the workout on MainActor
+    @MainActor
+    private func setGeneratedWorkout(_ workout: Workout) {
+        self.generatedWorkout = workout
+        self.isGenerating = false
+    }
+    
     
     private func createPrompt(duration: String, trainingType: String, difficulty: String, equipment: String) -> String {
         return """
+        You are a world-class coach for physical training. 
         Create a detailed \(duration) \(trainingType) workout for a \(difficulty) level person using \(equipment).
+        Consider that the person is 56 years old. 
         
         Respond ONLY with valid JSON in this exact format (no markdown, no additional text):
         {
@@ -60,7 +73,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
                 {
                   "set_number": 1,
                   "target_reps": 10,
-                  "target_weight": 0.0,
+                  "target_weight": 20.0,
                   "notes": "Optional instructions"
                 }
               ]
@@ -70,11 +83,23 @@ class GeminiWorkoutGeneratorService: ObservableObject {
         
         Use only these values for primary_muscle: Chest, Back, Shoulders, Biceps, Triceps, Forearms, Abs, Obliques, Quadriceps, Hamstrings, Glutes, Calves, Cardio, Full Body
         Use only these values for exercise_type: Strength, Cardio, Flexibility, Plyometric, Powerlifting, Olympic Lifting
-        
+        Use only the exercises with the following names: \(getExercisesAsList())
         Include 4-8 exercises with 2-4 sets each.
-        Propose the best rest time for each of the exercises.
+        Propose the best rest time and weight for each of the exercises.
         Make sure you do not exceed the duration of the workout as mentioned above.
         """
+    }
+    
+    private func getExercisesAsList() -> String {
+
+        var exerciseList: String = ""
+        for exercise in exercises {
+            if exerciseList.isEmpty {
+                exerciseList += ", "
+            }
+            exerciseList += exercise.name
+        }
+        return exerciseList
     }
     
     private func requestWorkoutFromGemini(prompt: String) async throws -> Workout {

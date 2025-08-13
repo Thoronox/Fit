@@ -85,6 +85,14 @@ struct StartWorkoutView: View {
         cleanUpWorkout(workout: workout)
         modelContext.insert(workout)
         try? modelContext.save()
+
+        for completedSet in workout.exercises.flatMap(\.sets) {
+            let service = OneRepMaxService(modelContext: modelContext)
+            // Auto-update 1RM when completing a set
+            service.updateOneRepMaxFromSet(completedSet)
+        }
+        try? modelContext.save()
+
         dismiss()
     }
 

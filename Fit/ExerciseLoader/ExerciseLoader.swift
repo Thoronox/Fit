@@ -18,7 +18,7 @@ class ExerciseLoader {
     /// Loads exercises from the JSON file and creates/updates Exercise objects
     /// - Parameter context: The ModelContext to insert/update the exercises
     /// - Returns: Array of Exercise objects (both new and updated)
-    static func loadExercisesFromJSON(context: ModelContext) throws -> [Exercise] {
+    static func loadExercisesFromJSON(context: ModelContext) throws  {
         guard let url = Bundle.main.url(forResource: "exercises", withExtension: "json") else {
             throw ExerciseLoaderError.fileNotFound
         }
@@ -50,8 +50,6 @@ class ExerciseLoader {
                 exercises.append(newExercise)
             }
         }
-        
-        return exercises
     }
     
     /// Creates an Exercise object from ExerciseData

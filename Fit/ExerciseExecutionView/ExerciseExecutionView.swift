@@ -55,7 +55,7 @@ struct ExerciseExecutionView: View {
             }
         }
         .sheet(isPresented: $showPauseTimer) {
-            ExercisePauseView(restTime: workoutExercise.restTime ?? 60)
+            ExercisePauseView(restTime: workoutExercise.restTime)
         }
 
     }
@@ -266,6 +266,7 @@ struct ExerciseExecutionView: View {
                 setInputs[index].isCompleted = true
             }
         }
+        
         dismiss()
     }
 

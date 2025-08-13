@@ -1,14 +1,22 @@
 import SwiftUI
 import SwiftData
 
+class WorkoutCriteria: ObservableObject {
+    @Published var durationSelected = "45 min"
+    @Published var trainingTypeSelected = "Hypertrophy"
+    @Published var difficultySelected = "Intermediate"
+    @Published var equipmentSelected = "Equipment"
+}
 
 struct WorkoutView: View {
     @Query(sort: \Workout.date, order: .reverse) private var workouts: [Workout]
+
+    @StateObject private var criteria = WorkoutCriteria()
+
     @Query private var exercises: [Exercise]
     @State private var startWorkout: Bool = false
     @State private var selectedWorkoutExercise: WorkoutExercise?
     @State private var currentWorkout: Workout?
-    
     // Move delete alert state to parent view
     @State private var exerciseToDelete: WorkoutExercise?
     @State private var showDeleteAlert = false
@@ -18,6 +26,7 @@ struct WorkoutView: View {
     var body: some View {
         VStack {
             WorkoutCriteriaView()
+                .environmentObject(criteria)
             if let workout = currentWorkout {
                 List {
                     ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
@@ -45,22 +54,23 @@ struct WorkoutView: View {
             }
 
             Button("Start Workout") {
+                if currentWorkout == nil {
+                    currentWorkout = computeNewWorkout()
+                }
                 startWorkout = true
             }
             .buttonStyle(.borderedProminent)
             .padding(.bottom)
         }
         .navigationTitle("Workout")
+        .onChange(of: criteria.durationSelected) { generateWorkout() }
+        .onChange(of: criteria.trainingTypeSelected) { generateWorkout() }
+        .onChange(of: criteria.difficultySelected) { generateWorkout() }
+        .onChange(of: criteria.equipmentSelected) { generateWorkout() }
         .onAppear() {
             if currentWorkout == nil {
-//                currentWorkout = computeNewWorkout()
                 Task {
-                    await workoutGenerator.generateWorkout(
-                        duration: "45m",
-                        trainingType: "Hypertrophy",
-                        difficulty: "Intermediate",
-                        equipment: "Dumbbells"                )
-                    currentWorkout = workoutGenerator.generatedWorkout
+                    generateWorkout()
                 }
             }
         }
@@ -86,6 +96,19 @@ struct WorkoutView: View {
         }
     }
 
+    private func generateWorkout() {
+        currentWorkout = nil
+         Task {
+             await workoutGenerator.generateWorkout(
+                 duration: criteria.durationSelected,
+                 trainingType: criteria.trainingTypeSelected,
+                 difficulty: criteria.difficultySelected,
+                 equipment: criteria.equipmentSelected
+             )
+             currentWorkout = workoutGenerator.generatedWorkout
+         }
+     }
+    
     private func computeNewWorkout() -> Workout {
         let newWorkout = Workout(name: "Workout \(workouts.count + 1)")
         
