@@ -7,7 +7,8 @@ struct ExerciseExecutionView: View {
     @State private var currentSetIndex = 0
 
     let workoutExercise: WorkoutExercise
-
+    let readonly: Bool
+    
     struct SetInput: Identifiable {
         let id = UUID()
         var reps: String
@@ -27,7 +28,9 @@ struct ExerciseExecutionView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                WorkoutTimerView()
+                if (!readonly) {
+                    WorkoutTimerView()
+                }
 
                 headerView
 
@@ -147,32 +150,48 @@ struct ExerciseExecutionView: View {
 
     private var bottomButtons: some View {
         VStack(spacing: 12) {
-            Button("Log All Sets") {
-                logAllSets()
+            if (readonly) {
+                Button("Close") {
+                    updateSets()
+                    dismiss()
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Color.red)
+                .foregroundColor(.white)
+                .font(.headline)
+                .cornerRadius(12)
+            } else {
+                Button("Log All Sets") {
+                    logAllSets()
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Color.gray.opacity(0.3))
+                .foregroundColor(.white)
+                .font(.headline)
+                .cornerRadius(12)
+                
+                Button("Log Set & Next Exercise") {
+                    logCurrentSet()
+                }
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(Color.red)
+                .foregroundColor(.white)
+                .font(.headline)
+                .cornerRadius(12)
+                .disabled(currentSetIndex >= setInputs.count ||
+                          setInputs[currentSetIndex].reps.isEmpty ||
+                          setInputs[currentSetIndex].weight.isEmpty)
             }
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(Color.gray.opacity(0.3))
-            .foregroundColor(.white)
-            .font(.headline)
-            .cornerRadius(12)
-
-            Button("Log Set & Next Exercise") {
-                logCurrentSet()
-            }
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(Color.red)
-            .foregroundColor(.white)
-            .font(.headline)
-            .cornerRadius(12)
-            .disabled(currentSetIndex >= setInputs.count ||
-                     setInputs[currentSetIndex].reps.isEmpty ||
-                     setInputs[currentSetIndex].weight.isEmpty)
         }
         .padding()
     }
 
     // MARK: - Logic
 
+    private func updateSets() {
+        workoutExercise.sets.removeAll()
+    }
+    
     private func setupSetInputs() {
         setInputs = workoutExercise.sets.enumerated().map { index, set in
             SetInput(

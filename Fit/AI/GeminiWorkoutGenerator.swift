@@ -4,34 +4,42 @@ import SwiftData
 
 // MARK: - Google Gemini AI Workout Generator Service
 class GeminiWorkoutGeneratorService: ObservableObject {
-    @Query var exercises: [Exercise]
-
     @Published var isGenerating = false
     @Published var generatedWorkout: Workout?
     @Published var errorMessage: String?
     
     // Get your free API key from: https://aistudio.google.com/app/apikey
     private let apiKey = "AIzaSyDbQmxH89hT8xWYd2xlYeiEqG2aMZ8Jfh0"
-    private let apiURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+    private let apiURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    private var exercises: [Exercise] = []
     
     func generateWorkout(
+        modelContext: ModelContext,
         duration: String,
         trainingType: String,
         difficulty: String,
-        equipment: String
+        workoutSplit: String,
+        exercises: [Exercise]
     ) async {
+
+        
+        self.exercises = exercises
         await MainActor.run {
             isGenerating = true
             errorMessage = nil
         }
-        
+
+        let workoutHistory = getWorkoutHistoryForAI(from: modelContext)
+
         let prompt = createPrompt(
             duration: duration,
             trainingType: trainingType,
             difficulty: difficulty,
-            equipment: equipment
+            workoutSplit: workoutSplit,
+            history: workoutHistory
         )
-print (prompt)
+        print(prompt)
+        
         do {
             let workout = try await requestWorkoutFromGemini(prompt: prompt)
             
@@ -53,13 +61,10 @@ print (prompt)
         self.isGenerating = false
     }
     
-    
-    private func createPrompt(duration: String, trainingType: String, difficulty: String, equipment: String) -> String {
+    private func createPrompt(duration: String, trainingType: String, difficulty: String, workoutSplit: String, history: String) -> String {
         return """
         You are a world-class coach for physical training. 
-        Create a detailed \(duration) \(trainingType) workout for a \(difficulty) level person using \(equipment).
-        Consider that the person is 56 years old. 
-        
+        Create a detailed \(duration) \(trainingType) workout for a \(difficulty) level person. As a workout Split use \(workoutSplit).
         Respond ONLY with valid JSON in this exact format (no markdown, no additional text):
         {
           "workout_name": "Your Workout Name",
@@ -68,7 +73,7 @@ print (prompt)
               "name": "Exercise Name",
               "primary_muscle": "Chest",
               "exercise_type": "Strength",
-              "rest_time": 89
+              "rest_time": 70,
               "sets": [
                 {
                   "set_number": 1,
@@ -80,21 +85,26 @@ print (prompt)
             }
           ]
         }
-        
+
+        The workout_name must follow "YYYY-MM-DD [Training Type] [Primary Muscle Groups]" format.
         Use only these values for primary_muscle: Chest, Back, Shoulders, Biceps, Triceps, Forearms, Abs, Obliques, Quadriceps, Hamstrings, Glutes, Calves, Cardio, Full Body
         Use only these values for exercise_type: Strength, Cardio, Flexibility, Plyometric, Powerlifting, Olympic Lifting
-        Use only the exercises with the following names: \(getExercisesAsList())
+        Use only the exercises with the following names and do not invent exercises not listed: \(getExercisesAsList())
         Include 4-8 exercises with 2-4 sets each.
         Propose the best rest time and weight for each of the exercises.
-        Make sure you do not exceed the duration of the workout as mentioned above.
+        All rest_time values should be integers (seconds) and realistic for a \(trainingType) workout.
+        The total sets × reps × rest must fit within the \(duration) limit.
+        The target_weight should in in kg and reasonable for a 56-year-old \(difficulty) lifter. 
+        
+        Take the following workout history into accout for caclulating the exercises, the weight and the repetitions.
+        \(history)
         """
     }
     
     private func getExercisesAsList() -> String {
-
         var exerciseList: String = ""
         for exercise in exercises {
-            if exerciseList.isEmpty {
+            if !exerciseList.isEmpty {
                 exerciseList += ", "
             }
             exerciseList += exercise.name
@@ -189,34 +199,40 @@ print (prompt)
         
         // Create Workout object
         let workout = Workout(name: workoutData.workoutName)
+  
+        for ii in 0..<exercises.count {
+            print ("\(ii) : \(exercises[ii].id) , \(exercises[ii].name)")
+        }
         
         // Create exercises and sets
         for (index, exerciseData) in workoutData.exercises.enumerated() {
-            let muscleGroup = MuscleGroup(rawValue: exerciseData.primaryMuscle) ?? .fullBody
-            let exerciseType = ExerciseType(rawValue: exerciseData.exerciseType) ?? .strength
-            
+            if let exercise = exercises.first(where: { $0.name == exerciseData.name }) {
+                let workoutExercise = WorkoutExercise(exercise: exercise, order: index)
+                workoutExercise.restTime = exerciseData.restTime
+                for setData in exerciseData.sets {
+                    let exerciseSet = ExerciseSet(
+                        setNumber: setData.setNumber,
+                        weight: setData.targetWeight,
+                        reps: setData.targetReps
+                    )
+                    exerciseSet.notes = setData.notes
+                    exerciseSet.workoutExercise = workoutExercise
+                    
+                    workoutExercise.sets.append(exerciseSet)
+                }
+                
+                workoutExercise.workout = workout
+                workout.exercises.append(workoutExercise)
+            } else {
+                print("Exercise '\(exerciseData.name)' not found")
+            }
+            /*
             let exercise = Exercise(
                 name: exerciseData.name,
                 primaryMuscleGroup: muscleGroup,
                 exerciseType: exerciseType
             )
-            
-            let workoutExercise = WorkoutExercise(exercise: exercise, order: index)
-            workoutExercise.restTime = exerciseData.restTime
-            for setData in exerciseData.sets {
-                let exerciseSet = ExerciseSet(
-                    setNumber: setData.setNumber,
-                    weight: setData.targetWeight,
-                    reps: setData.targetReps
-                )
-                exerciseSet.notes = setData.notes
-                exerciseSet.workoutExercise = workoutExercise
-                
-                workoutExercise.sets.append(exerciseSet)
-            }
-            
-            workoutExercise.workout = workout
-            workout.exercises.append(workoutExercise)
+             */
         }
         
         return workout
@@ -311,79 +327,5 @@ enum GeminiWorkoutGeneratorError: Error, LocalizedError {
         case .rateLimitExceeded:
             return "Rate limit exceeded - try again in a minute"
         }
-    }
-}
-
-// MARK: - Alternative Mock Generator (No API needed)
-class MockWorkoutGeneratorService: ObservableObject {
-    @Published var isGenerating = false
-    @Published var generatedWorkout: Workout?
-    @Published var errorMessage: String?
-    
-    func generateWorkout(
-        duration: String,
-        trainingType: String,
-        difficulty: String,
-        equipment: String
-    ) async {
-        await MainActor.run { isGenerating = true }
-        
-        // Simulate API delay
-        try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-        
-        await MainActor.run {
-            let workout = createMockWorkout(duration: duration, trainingType: trainingType, difficulty: difficulty, equipment: equipment)
-            self.generatedWorkout = workout
-            self.isGenerating = false
-        }
-    }
-    
-    private func createMockWorkout(duration: String, trainingType: String, difficulty: String, equipment: String) -> Workout {
-        let workout = Workout(name: "\(difficulty) \(duration) \(trainingType) Workout")
-        
-        // Create different workouts based on type
-        let exercises: [(String, MuscleGroup, ExerciseType, [(Int, Int, Double)])] = {
-            switch trainingType.lowercased() {
-            case "strength":
-                return [
-                    ("Push-ups", .chest, .strength, [(12, 15, 0), (10, 12, 0), (8, 10, 0)]),
-                    ("Squats", .quadriceps, .strength, [(15, 20, 0), (12, 15, 0), (10, 12, 0)]),
-                    ("Pull-ups", .back, .strength, [(5, 8, 0), (4, 6, 0), (3, 5, 0)]),
-                    ("Lunges", .glutes, .strength, [(10, 12, 0), (10, 12, 0), (8, 10, 0)])
-                ]
-            case "cardio":
-                return [
-                    ("Jumping Jacks", .fullBody, .cardio, [(30, 45, 0), (30, 45, 0), (30, 45, 0)]),
-                    ("High Knees", .quadriceps, .cardio, [(20, 30, 0), (20, 30, 0), (20, 30, 0)]),
-                    ("Burpees", .fullBody, .cardio, [(8, 12, 0), (8, 12, 0), (6, 10, 0)]),
-                    ("Mountain Climbers", .abs, .cardio, [(20, 30, 0), (20, 30, 0), (15, 25, 0)])
-                ]
-            default:
-                return [
-                    ("Push-ups", .chest, .strength, [(10, 12, 0), (10, 12, 0)]),
-                    ("Squats", .quadriceps, .strength, [(15, 20, 0), (15, 20, 0)]),
-                    ("Plank", .abs, .strength, [(30, 45, 0), (30, 45, 0)])
-                ]
-            }
-        }()
-        
-        for (index, (exerciseName, muscleGroup, exerciseType, sets)) in exercises.enumerated() {
-            let exercise = Exercise(name: exerciseName, primaryMuscleGroup: muscleGroup, exerciseType: exerciseType)
-            let workoutExercise = WorkoutExercise(exercise: exercise, order: index)
-            
-            for (setIndex, (minReps, maxReps, weight)) in sets.enumerated() {
-                let reps = difficulty == "Beginner" ? minReps : maxReps
-                let exerciseSet = ExerciseSet(setNumber: setIndex + 1, weight: weight, reps: reps)
-                exerciseSet.notes = equipment == "Bodyweight" ? "Use bodyweight only" : "Adjust weight as needed"
-                exerciseSet.workoutExercise = workoutExercise
-                
-                workoutExercise.sets.append(exerciseSet)
-            }
-            
-            workoutExercise.workout = workout
-            workout.exercises.append(workoutExercise)
-        }
-        
-        return workout
     }
 }

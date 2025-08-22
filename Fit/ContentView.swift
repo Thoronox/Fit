@@ -10,7 +10,12 @@ struct ContentView: View {
                 WorkoutView()
             }
             .tabItem { Label("Workout", systemImage: "figure.strengthtraining.traditional") }
-            
+
+            NavigationStack {
+                StatisticsView()
+            }
+            .tabItem { Label("Statistics", systemImage: "chart.xyaxis.line") }
+
             NavigationStack {
                 LogView()
             }
@@ -20,11 +25,6 @@ struct ContentView: View {
         .onAppear {            
             //            seedDataIfNeeded()
             loadExercises()
-            let ORMService = OneRepMaxService(modelContext: modelContext)
-            let ORM = ORMService.getCurrentOneRepMaxByExerciseName("Push-Ups")
-            print (ORM?.date)
-            print (ORM?.oneRepMax)
-
         }
     }
     
@@ -36,24 +36,6 @@ struct ContentView: View {
         } catch {
             errorMessage = error.localizedDescription
             print(errorMessage)
-        }
-    }
-    
-    func clearAllData(modelContext: ModelContext) {
-        do {
-            // Delete all instances of each model type
-            try modelContext.delete(model: OneRepMaxHistory.self)
-            try modelContext.delete(model: PersonalRecord.self)
-            try modelContext.delete(model: ExerciseSet.self)
-            try modelContext.delete(model: WorkoutExercise.self)
-            try modelContext.delete(model: Exercise.self)
-            
-            // Save the changes
-            try modelContext.save()
-            
-            print("All data cleared successfully")
-        } catch {
-            print("Error clearing data: \(error)")
         }
     }
 }

@@ -62,6 +62,7 @@ class ExerciseLoader {
         
         // Create the exercise
         let exercise = Exercise(
+            id: data.id,
             name: data.name,
             primaryMuscleGroup: primaryMuscleGroup,
             exerciseType: exerciseType

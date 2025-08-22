@@ -61,6 +61,7 @@ class OneRepMaxService {
         
         // Check if this set represents a new PR
         let currentPR = getCurrentOneRepMaxByExerciseName(exercise.name)
+        
         let newOneRepMax = set.oneRepMax()
         
         if currentPR?.oneRepMax ?? 0 < newOneRepMax {

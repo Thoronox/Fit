@@ -42,12 +42,17 @@ class Exercise {
     var exerciseType: ExerciseType
     var isCompound: Bool // Whether it's a compound movement
     
-    init(name: String, primaryMuscleGroup: MuscleGroup, exerciseType: ExerciseType) {
-        self.id = UUID()
+    init(id: String, name: String, primaryMuscleGroup: MuscleGroup, exerciseType: ExerciseType) {
+        // self.id = UUID()
+        self.id = UUID(uuidString: id)!
         self.name = name
         self.primaryMuscleGroup = primaryMuscleGroup
         self.exerciseType = exerciseType
         self.isCompound = false
+    }
+    
+    var debugInfo: String {
+        "Name: \(name), PrimaryMuscleGroup: \(primaryMuscleGroup), ID: \(id)"
     }
 }
 
@@ -79,6 +84,10 @@ class WorkoutExercise {
     
     var maxWeight: Double {
         sets.compactMap { $0.weight }.max() ?? 0
+    }
+    
+    var oneRepMax: Double {
+        sets.compactMap { $0.oneRepMax }.max() ?? 0
     }
 }
 
@@ -127,7 +136,7 @@ class ExerciseSet {
     
     // Determine if this set is a potential PR
     var isPotentialPR: Bool {
-        guard let exercise = workoutExercise?.exercise else { return false }
+        guard let _ = workoutExercise?.exercise else { return false }
         // Logic to check if this is better than previous records
         // This would need access to ModelContext to query existing records
         return true // Simplified for example
@@ -284,7 +293,7 @@ enum OneRepMaxCalculation: String, CaseIterable, Codable {
 @Model
 class OneRepMaxHistory {
     var id: UUID
-    @Attribute var exerciseId: UUID? { exercise?.id }
+    var exerciseId: UUID? { exercise?.id }
     var exercise: Exercise?
     var oneRepMax: Double
     var date: Date
@@ -304,6 +313,8 @@ class OneRepMaxHistory {
     }
 }
 
+    
+    
 enum OneRepMaxSource: String, CaseIterable, Codable {
     case actualTest = "Actual 1RM Test"
     case calculatedFromSet = "Calculated from Set"
@@ -422,24 +433,118 @@ enum FitnessGoal: String, CaseIterable, Codable {
     case bodybuilding = "Bodybuilding"
 }
 
-// MARK: - Extensions for Range Coding
-extension ClosedRange: Codable where Bound: Codable {
-    enum CodingKeys: String, CodingKey {
-        case lowerBound, upperBound
+
+
+
+
+
+
+extension WorkoutExercise {
+    
+    /// Debug method to find all workout exercises for this exercise across all workouts
+    func findAllPerformances(in context: ModelContext) -> [WorkoutExercise] {
+        guard let currentExercise = self.exercise else {
+            print("❌ No exercise assigned to this WorkoutExercise")
+            return []
+        }
+        
+        print("🔍 Searching for exercise: \(currentExercise.name) with ID: \(currentExercise.id)")
+        
+        // First, let's get ALL WorkoutExercises to see what we have
+        let allDescriptor = FetchDescriptor<WorkoutExercise>()
+        
+        do {
+            let allWorkoutExercises = try context.fetch(allDescriptor)
+            print("📊 Total WorkoutExercises in database: \(allWorkoutExercises.count)")
+            
+            // Filter for our exercise manually
+            let matchingExercises = allWorkoutExercises.filter { workoutExercise in
+                guard let exercise = workoutExercise.exercise else {
+                    print("⚠️ Found WorkoutExercise with no exercise")
+                    return false
+                }
+                
+                let matches = exercise.id == currentExercise.id
+                if matches {
+                    let workoutName = workoutExercise.workout?.name ?? "Unknown Workout"
+                    let workoutDate = workoutExercise.workout?.date ?? Date.distantPast
+                    let isCurrentWorkout = workoutExercise.id == self.id
+                    print("✅ Found match: \(exercise.name) in workout '\(workoutName)' on \(workoutDate) - Current: \(isCurrentWorkout)")
+                }
+                return matches
+            }
+            
+            print("🎯 Found \(matchingExercises.count) matching exercises")
+            return matchingExercises
+            
+        } catch {
+            print("❌ Error fetching all workout exercises: \(error)")
+            return []
+        }
     }
     
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let lowerBound = try container.decode(Bound.self, forKey: .lowerBound)
-        let upperBound = try container.decode(Bound.self, forKey: .upperBound)
-        self = lowerBound...upperBound
+
+    
+    /// Improved method to find last performance with detailed logging
+    func findLastPerformance(in context: ModelContext) -> WorkoutExercise? {
+        guard let currentExercise = self.exercise else {
+            print("❌ No exercise assigned to this WorkoutExercise")
+            return nil
+        }
+        
+        // Get all matching exercises first
+        let allMatches = findAllPerformances(in: context)
+        
+        // Filter out current workout exercise and sort by date
+        let previousPerformances = allMatches
+            .filter { $0.id != self.id }
+            .compactMap { workoutExercise -> (WorkoutExercise, Date)? in
+                guard let workout = workoutExercise.workout else { return nil }
+                return (workoutExercise, workout.date)
+            }
+            .sorted { $0.1 > $1.1 } // Sort by date descending
+                
+        if let mostRecent = previousPerformances.first {
+            return mostRecent.0
+        } else {
+            print("❌ No previous performances found")
+            return nil
+        }
     }
     
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(lowerBound, forKey: .lowerBound)
-        try container.encode(upperBound, forKey: .upperBound)
+
+    
+    /// Updated loadSetsFromLastPerformance with debug info
+    func loadSetsFromLastPerformance(in context: ModelContext) {
+       guard let lastPerformance = findLastPerformance(in: context) else {
+            print("❌ No previous performance found for this exercise")
+            return
+        }
+
+        // Clear existing sets (they're from the old exercise)
+        self.sets.removeAll()
+        
+        // Copy sets from last performance
+        for (index, previousSet) in lastPerformance.sets.enumerated() {
+            let newSet = ExerciseSet(
+                setNumber: index + 1,
+                weight: previousSet.weight,
+                reps: previousSet.reps
+            )
+            
+            // Copy additional properties if they exist
+            newSet.rpe = previousSet.rpe
+            newSet.duration = previousSet.duration
+            newSet.distance = previousSet.distance
+            newSet.notes = previousSet.notes
+            newSet.isCompleted = false // Reset completion status
+            
+            newSet.workoutExercise = self
+            self.sets.append(newSet)
+        }
+        
+        // Copy rest time if available
+        self.restTime = lastPerformance.restTime
     }
 }
-
 

@@ -26,7 +26,7 @@ struct StartWorkoutView: View {
                               },
                             onExerciseReplaced: { newExercise in
                                 // Replace the exercise in your data model
-                                workoutExercise.exercise = newExercise
+                                workoutExercise.exercise = newExercise                                
                             },
                             onExerciseDeleted: {
                                 // Store the exercise to delete and show alert
@@ -75,7 +75,7 @@ struct StartWorkoutView: View {
 
         }
         .sheet(item: $selectedWorkoutExercise) { workoutExercise in
-            ExerciseExecutionView(workoutExercise: workoutExercise)
+            ExerciseExecutionView(workoutExercise: workoutExercise, readonly: false)
         }
         
     }
@@ -92,7 +92,7 @@ struct StartWorkoutView: View {
             service.updateOneRepMaxFromSet(completedSet)
         }
         try? modelContext.save()
-
+        NotificationCenter.default.post(name: .workoutFinished, object: nil)
         dismiss()
     }
 

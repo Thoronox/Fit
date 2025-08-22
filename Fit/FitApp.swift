@@ -25,6 +25,7 @@ struct FitApp: App {
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
+            
               let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
               let context = ModelContext(container)
 
@@ -35,6 +36,7 @@ struct FitApp: App {
                       context.delete(item)
                   }
               }
+
 /*
               // Delete all entities
               try deleteAll(Workout.self)
@@ -46,6 +48,7 @@ struct FitApp: App {
               try deleteAll(PersonalRecord.self)
               try deleteAll(UserProfile.self)
               try deleteAll(OneRepMaxHistory.self)
+
 
               try context.save()
 */

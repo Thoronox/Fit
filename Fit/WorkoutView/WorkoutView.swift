@@ -5,109 +5,198 @@ class WorkoutCriteria: ObservableObject {
     @Published var durationSelected = "45 min"
     @Published var trainingTypeSelected = "Hypertrophy"
     @Published var difficultySelected = "Intermediate"
-    @Published var equipmentSelected = "Equipment"
+    @Published var workoutSplitSelected = "Full Body"
 }
 
 struct WorkoutView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Workout.date, order: .reverse) private var workouts: [Workout]
+    @Query private var exercises: [Exercise]
 
     @StateObject private var criteria = WorkoutCriteria()
 
-    @Query private var exercises: [Exercise]
     @State private var startWorkout: Bool = false
     @State private var selectedWorkoutExercise: WorkoutExercise?
     @State private var currentWorkout: Workout?
-    // Move delete alert state to parent view
     @State private var exerciseToDelete: WorkoutExercise?
     @State private var showDeleteAlert = false
-
-    @StateObject private var workoutGenerator = GeminiWorkoutGeneratorService()
+    @State private var showRetry = false
+    @State private var workoutGenerator: GeminiWorkoutGeneratorService?
 
     var body: some View {
         VStack {
-            WorkoutCriteriaView()
-                .environmentObject(criteria)
-            if let workout = currentWorkout {
-                List {
-                    ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                        ExerciseView(
-                            workoutExercise: workoutExercise,
-                            action: {
-                                selectedWorkoutExercise = workoutExercise
-                            },
-                            onExerciseReplaced: { newExercise in
-                                workoutExercise.exercise = newExercise
-                            },
-                            onExerciseDeleted: {
-                                // Store the exercise to delete and show alert
-                                exerciseToDelete = workoutExercise
-                                showDeleteAlert = true
-                            }
-                        )
-                        .listRowBackground(Color.black)
-                    }
-                }
-                .listStyle(.plain)
-            } else {
-                ProgressView("Loading workout...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-
-            Button("Start Workout") {
-                if currentWorkout == nil {
-                    currentWorkout = computeNewWorkout()
-                }
-                startWorkout = true
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.bottom)
+            criteriaSection
+            workoutContentSection
+            startWorkoutButton
         }
         .navigationTitle("Workout")
-        .onChange(of: criteria.durationSelected) { generateWorkout() }
-        .onChange(of: criteria.trainingTypeSelected) { generateWorkout() }
-        .onChange(of: criteria.difficultySelected) { generateWorkout() }
-        .onChange(of: criteria.equipmentSelected) { generateWorkout() }
-        .onAppear() {
-            if currentWorkout == nil {
-                Task {
-                    generateWorkout()
-                }
-            }
-        }
+        .onAppear(perform: handleOnAppear)
+        .onChange(of: criteria.durationSelected) { generateWorkout(modelContext: modelContext) }
+        .onChange(of: criteria.trainingTypeSelected) { generateWorkout(modelContext: modelContext) }
+        .onChange(of: criteria.difficultySelected) { generateWorkout(modelContext: modelContext) }
+        .onChange(of: criteria.workoutSplitSelected) { generateWorkout(modelContext: modelContext) }
         .sheet(isPresented: $startWorkout) {
-            if let workout = currentWorkout {
-                StartWorkoutView(workout: workout)
+            workoutSheet
+        }
+        .alert("Delete Exercise", isPresented: $showDeleteAlert) {
+            deleteAlert
+        } message: {
+            deleteAlertMessage
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .workoutFinished)) { _ in
+            currentWorkout = nil
+        }
+        .sheet(item: $selectedWorkoutExercise) { workoutExercise in
+            ExerciseExecutionView(workoutExercise: workoutExercise, readonly: true)
+        }
+    }
+    
+    // MARK: - View Components
+    
+    @ViewBuilder
+    private var criteriaSection: some View {
+        WorkoutCriteriaView()
+            .environmentObject(criteria)
+    }
+    
+    @ViewBuilder
+    private var workoutContentSection: some View {
+        if let workout = currentWorkout {
+            workoutList(for: workout)
+        } else {
+            loadingOrErrorSection
+        }
+    }
+    
+    @ViewBuilder
+    private func workoutList(for workout: Workout) -> some View {
+        List {
+            ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
+                ExerciseView(
+                    workoutExercise: workoutExercise,
+                    action: {
+                        selectedWorkoutExercise = workoutExercise
+                    },
+                    onExerciseReplaced: { newExercise in
+                        workoutExercise.exercise = newExercise                        
+                        workoutExercise.loadSetsFromLastPerformance(in: modelContext)
+                    },
+                    onExerciseDeleted: {
+                        exerciseToDelete = workoutExercise
+                        showDeleteAlert = true
+                    }
+                )
+                .listRowBackground(Color.black)
             }
         }
-        // Move the delete alert to the parent view
-        .alert("Delete Exercise", isPresented: $showDeleteAlert) {
-            Button("Cancel", role: .cancel) {
-                exerciseToDelete = nil
+        .listStyle(.plain)
+    }
+    
+    @ViewBuilder
+    private var loadingOrErrorSection: some View {
+        if showRetry == false {
+            ProgressView("Loading new workout...")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            VStack {
+                Spacer()
+                Text("Error loading AI generated workout")
+                retryButton
+                Spacer()
             }
-            Button("Delete", role: .destructive) {
-                if let workoutExercise = exerciseToDelete,
-                   let workout = currentWorkout {
-                    deleteExercise(workoutExercise, from: workout)
-                }
-                exerciseToDelete = nil
+        }
+    }
+    
+    @ViewBuilder
+    private var retryButton: some View {
+        Button("Retry") {
+            showRetry = false
+            Task {
+                generateWorkout(modelContext: modelContext)
             }
-        } message: {
-            Text("Are you sure you want to delete \(exerciseToDelete?.exercise?.name ?? "this exercise")? This action cannot be undone.")
+        }
+        .buttonStyle(.borderedProminent)
+        .padding(.bottom)
+    }
+    
+    @ViewBuilder
+    private var startWorkoutButton: some View {
+        Button("Start Workout") {
+            if currentWorkout == nil {
+                currentWorkout = computeNewWorkout()
+            }
+            startWorkout = true
+        }
+        .buttonStyle(.borderedProminent)
+        .padding(.bottom)
+    }
+    
+    @ViewBuilder
+    private var workoutSheet: some View {
+        if let workout = currentWorkout {
+            StartWorkoutView(workout: workout)
+        }
+    }
+    
+    @ViewBuilder
+    private var deleteAlert: some View {
+        Button("Cancel", role: .cancel) {
+            exerciseToDelete = nil
+        }
+        Button("Delete", role: .destructive) {
+            if let workoutExercise = exerciseToDelete,
+               let workout = currentWorkout {
+                deleteExercise(workoutExercise, from: workout)
+            }
+            exerciseToDelete = nil
+        }
+    }
+    
+    @ViewBuilder
+    private var deleteAlertMessage: some View {
+        Text("Are you sure you want to delete \(exerciseToDelete?.exercise?.name ?? "this exercise")? This action cannot be undone.")
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func handleOnAppear() {
+        if workoutGenerator == nil {
+            workoutGenerator = GeminiWorkoutGeneratorService()
+        }
+        
+        if currentWorkout == nil {
+            Task {
+                generateWorkout(modelContext: modelContext)
+            }
         }
     }
 
-    private func generateWorkout() {
+    private func generateWorkout(modelContext: ModelContext) {
+        if workoutGenerator == nil {
+            workoutGenerator = GeminiWorkoutGeneratorService()
+        }
+        
+        guard let generator = workoutGenerator else { return }
+        
         currentWorkout = nil
-         Task {
-             await workoutGenerator.generateWorkout(
-                 duration: criteria.durationSelected,
-                 trainingType: criteria.trainingTypeSelected,
-                 difficulty: criteria.difficultySelected,
-                 equipment: criteria.equipmentSelected
-             )
-             currentWorkout = workoutGenerator.generatedWorkout
-         }
-     }
+        Task {
+            await generator.generateWorkout(
+                modelContext: modelContext,
+                duration: criteria.durationSelected,
+                trainingType: criteria.trainingTypeSelected,
+                difficulty: criteria.difficultySelected,
+                workoutSplit: criteria.workoutSplitSelected,
+                exercises: exercises
+            )
+            currentWorkout = generator.generatedWorkout
+
+            if currentWorkout == nil {
+                showRetry = true
+            } else {
+                showRetry = false
+            }
+        }
+    }
     
     private func computeNewWorkout() -> Workout {
         let newWorkout = Workout(name: "Workout \(workouts.count + 1)")
@@ -126,23 +215,25 @@ struct WorkoutView: View {
     
     private func deleteExercise(_ workoutExercise: WorkoutExercise, from workout: Workout) {
         withAnimation {
-            // Remove from the workout's exercises array
             if let index = workout.exercises.firstIndex(where: { $0.id == workoutExercise.id }) {
                 workout.exercises.remove(at: index)
-                
-                // Reorder remaining exercises
                 reorderExercises(in: workout)
             }
         }
     }
     
     private func reorderExercises(in workout: Workout) {
-        // Reorder the remaining exercises to maintain sequential order
         for (index, exercise) in workout.exercises.enumerated() {
             exercise.order = index
         }
     }
 }
+
+extension Notification.Name {
+    static let workoutFinished = Notification.Name("workoutFinished")
+}
+
+
 
 
 
