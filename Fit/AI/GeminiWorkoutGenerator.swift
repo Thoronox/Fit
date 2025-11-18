@@ -1,6 +1,48 @@
 import SwiftUI
 import Foundation
 import SwiftData
+import os
+
+// MARK: - Constants
+
+private enum GeminiConstants {
+    static let requestTimeout: TimeInterval = 60
+    static let resourceTimeout: TimeInterval = 300
+    static let minExercisesPerWorkout = 4
+    static let maxExercisesPerWorkout = 8
+    static let minSetsPerExercise = 2
+    static let maxSetsPerExercise = 4
+    static let maxRetries = 2
+    static let retryDelay: TimeInterval = 1.0
+}
+
+// MARK: - URLSession Delegate for TLS Bypass
+class TLSBypassDelegate: NSObject, URLSessionDelegate {
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Fit", category: "TLSBypass")
+    
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        // Check if TLS bypass is enabled in Config
+        guard Config.bypassTLSValidation else {
+            completionHandler(.performDefaultHandling, nil)
+            return
+        }
+        
+        // Bypass certificate validation for corporate proxies
+        // WARNING: Only use this when behind a trusted corporate proxy
+        if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+           let serverTrust = challenge.protectionSpace.serverTrust {
+            logger.warning("⚠️ Bypassing TLS certificate validation for: \(challenge.protectionSpace.host)")
+            let credential = URLCredential(trust: serverTrust)
+            completionHandler(.useCredential, credential)
+        } else {
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+}
 
 // MARK: - Google Gemini AI Workout Generator Service
 class GeminiWorkoutGeneratorService: ObservableObject {
@@ -8,10 +50,21 @@ class GeminiWorkoutGeneratorService: ObservableObject {
     @Published var generatedWorkout: Workout?
     @Published var errorMessage: String?
     
-    // Get your free API key from: https://aistudio.google.com/app/apikey
-    private let apiKey = "AIzaSyDbQmxH89hT8xWYd2xlYeiEqG2aMZ8Jfh0"
-    private let apiURL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    // API key loaded securely from Config
+    private let apiKey = Config.geminiAPIKey
+    private let apiURL = Config.geminiAPIURL
     private var exercises: [Exercise] = []
+    
+    // Logger
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Fit", category: "GeminiWorkoutGenerator")
+    
+    // Custom URLSession with TLS bypass for corporate proxies
+    private lazy var urlSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = GeminiConstants.requestTimeout
+        config.timeoutIntervalForResource = GeminiConstants.resourceTimeout
+        return URLSession(configuration: config, delegate: TLSBypassDelegate(), delegateQueue: nil)
+    }()
     
     func generateWorkout(
         modelContext: ModelContext,
@@ -21,16 +74,22 @@ class GeminiWorkoutGeneratorService: ObservableObject {
         workoutSplit: String,
         exercises: [Exercise]
     ) async {
-
+        // Validate inputs
+        guard !exercises.isEmpty else {
+            await setError("No exercises available to generate workout")
+            return
+        }
         
         self.exercises = exercises
         await MainActor.run {
             isGenerating = true
             errorMessage = nil
         }
-
+        
+        logger.info("Starting workout generation: duration=\(duration), type=\(trainingType), difficulty=\(difficulty), split=\(workoutSplit)")
+        
         let workoutHistory = getWorkoutHistoryForAI(from: modelContext)
-
+        
         let prompt = createPrompt(
             duration: duration,
             trainingType: trainingType,
@@ -38,27 +97,66 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             workoutSplit: workoutSplit,
             history: workoutHistory
         )
-        print(prompt)
+        logger.debug("Generated prompt with \(workoutHistory.count) characters of workout history")
         
         do {
             let workout = try await requestWorkoutFromGemini(prompt: prompt)
             
-            // Fix: Call MainActor method directly
+            // Validate the workout before setting it
+            guard validateWorkout(workout) else {
+                throw GeminiWorkoutGeneratorError.invalidWorkout
+            }
+            
             await setGeneratedWorkout(workout)
+            logger.info("Successfully generated workout: \(workout.name)")
             
         } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
-                self.isGenerating = false
-            }
+            logger.error("Failed to generate workout: \(error.localizedDescription)")
+            await setError(error.localizedDescription)
         }
     }
 
-    // Helper method to set the workout on MainActor
+    // MARK: - Helper Methods
+    
     @MainActor
     private func setGeneratedWorkout(_ workout: Workout) {
         self.generatedWorkout = workout
         self.isGenerating = false
+    }
+    
+    @MainActor
+    private func setError(_ message: String) {
+        self.errorMessage = message
+        self.isGenerating = false
+    }
+    
+    /// Validates the generated workout meets basic requirements
+    private func validateWorkout(_ workout: Workout) -> Bool {
+        guard !workout.exercises.isEmpty else {
+            logger.warning("Workout validation failed: no exercises")
+            return false
+        }
+        
+        guard workout.exercises.count >= GeminiConstants.minExercisesPerWorkout,
+              workout.exercises.count <= GeminiConstants.maxExercisesPerWorkout else {
+            logger.warning("Workout validation failed: invalid exercise count \(workout.exercises.count)")
+            return false
+        }
+        
+        for workoutExercise in workout.exercises {
+            guard !workoutExercise.sets.isEmpty else {
+                logger.warning("Workout validation failed: exercise has no sets")
+                return false
+            }
+            
+            guard workoutExercise.sets.count >= GeminiConstants.minSetsPerExercise,
+                  workoutExercise.sets.count <= GeminiConstants.maxSetsPerExercise else {
+                logger.warning("Workout validation failed: invalid set count")
+                return false
+            }
+        }
+        
+        return true
     }
     
     private func createPrompt(duration: String, trainingType: String, difficulty: String, workoutSplit: String, history: String) -> String {
@@ -117,6 +215,8 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             throw GeminiWorkoutGeneratorError.invalidURL
         }
         
+        print("Using API Key \(apiKey)")
+        
         let requestBody: [String: Any] = [
             "contents": [
                 [
@@ -134,7 +234,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await urlSession.data(for: request)
         
         if let httpResponse = response as? HTTPURLResponse {
             print("HTTP Status Code: \(httpResponse.statusCode)")
@@ -307,6 +407,7 @@ enum GeminiWorkoutGeneratorError: Error, LocalizedError {
     case forbidden
     case badRequest
     case rateLimitExceeded
+    case invalidWorkout
     
     var errorDescription: String? {
         switch self {
@@ -326,6 +427,8 @@ enum GeminiWorkoutGeneratorError: Error, LocalizedError {
             return "Bad request - check the prompt format"
         case .rateLimitExceeded:
             return "Rate limit exceeded - try again in a minute"
+        case .invalidWorkout:
+            return "Generated workout doesn't meet validation requirements"
         }
     }
 }

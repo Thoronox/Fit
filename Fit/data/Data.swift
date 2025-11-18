@@ -92,7 +92,7 @@ class WorkoutExercise {
 }
 
 @Model
-class ExerciseSet {
+class ExerciseSet: Identifiable {
     var id: UUID
     var setNumber: Int
     var weight: Double // in kg or lbs

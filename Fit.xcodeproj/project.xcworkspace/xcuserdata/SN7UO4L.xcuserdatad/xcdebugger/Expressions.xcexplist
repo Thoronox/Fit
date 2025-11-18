@@ -3,7 +3,28 @@
    version = "1.0">
    <ContextStates>
       <ContextState
-         contextName = "WorkoutGeneratorService.requestWorkoutFromAI(prompt:):AIWorkoutGenerator.swift">
+         contextName = "closure #1 in closure #2 in closure #1 in ExerciseExecutionView.setsScroll.getter:ExerciseExecutionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "workoutExercise.sets.count">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #3 in ExerciseExecutionView.body.getter:ExerciseExecutionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "workoutExercise.restTime">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ExerciseExecutionView.deleteSet(at:):ExerciseExecutionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "workoutExercise.sets.count">
+            </PersistentString>
+         </PersistentStrings>
       </ContextState>
       <ContextState
          contextName = "closure #3 in WorkoutView.body.getter:WorkoutView.swift">
@@ -17,12 +38,7 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
-         contextName = "closure #3 in ExerciseExecutionView.body.getter:ExerciseExecutionView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "workoutExercise.restTime">
-            </PersistentString>
-         </PersistentStrings>
+         contextName = "WorkoutGeneratorService.requestWorkoutFromAI(prompt:):AIWorkoutGenerator.swift">
       </ContextState>
    </ContextStates>
 </VariablesViewState>

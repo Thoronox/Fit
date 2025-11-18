@@ -3,26 +3,16 @@ import SwiftUI
 struct ExerciseExecutionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @State private var setInputs: [SetInput] = []
     @State private var currentSetIndex = 0
 
-    let workoutExercise: WorkoutExercise
+    @Bindable var workoutExercise: WorkoutExercise
     let readonly: Bool
-    
-    struct SetInput: Identifiable {
-        let id = UUID()
-        var reps: String
-        var weight: String
-        var isCompleted: Bool
-        var setNumber: Int
-    }
 
     fileprivate enum Field: Hashable {
         case reps(index: Int)
         case weight(index: Int)
     }
     @FocusState private var focusedField: Field?
-
     @State private var showPauseTimer = false
 
     var body: some View {
@@ -33,9 +23,7 @@ struct ExerciseExecutionView: View {
                 }
 
                 headerView
-
                 setsScroll
-
                 bottomButtons
             }
             .toolbar {
@@ -52,7 +40,7 @@ struct ExerciseExecutionView: View {
             .background(Color.black)
         }
         .onAppear {
-            setupSetInputs()
+            setupInitialState()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 focusedField = .reps(index: currentSetIndex)
             }
@@ -60,7 +48,6 @@ struct ExerciseExecutionView: View {
         .sheet(isPresented: $showPauseTimer) {
             ExercisePauseView(restTime: workoutExercise.restTime)
         }
-
     }
 
     // MARK: - Subviews
@@ -104,27 +91,29 @@ struct ExerciseExecutionView: View {
             .padding(.horizontal)
             .padding(.bottom, 8)
 
-            // Sets List
+            // Sets List - FIXED: Use the sets directly instead of indices
             List {
-                ForEach($setInputs.indices, id: \.self) { index in
-                    SetRowView(
-                        input: $setInputs[index],
-                        index: index,
-                        focusedField: $focusedField,
-                        onRepsChange: { newValue in
-                            propagateRepsToBelow(fromIndex: index, value: newValue)
-                        },
-                        onWeightChange: { newValue in
-                            propagateWeightToBelow(fromIndex: index, value: newValue)
+                ForEach(workoutExercise.sets) { set in
+                    if let index = workoutExercise.sets.firstIndex(where: { $0.id == set.id }) {
+                        SetRowView(
+                            set: $workoutExercise.sets[index],
+                            index: index,
+                            focusedField: $focusedField,
+                            onRepsChange: { newValue in
+                                propagateRepsToBelow(fromIndex: index, value: newValue)
+                            },
+                            onWeightChange: { newValue in
+                                propagateWeightToBelow(fromIndex: index, value: newValue)
+                            }
+                        )
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .swipeActions(edge: .trailing) {
+                            Button("Delete") {
+                                deleteSet(at: index)
+                            }
+                            .tint(.red)
                         }
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .swipeActions(edge: .trailing) {
-                        Button("Delete") {
-                            deleteSet(at: index)
-                        }
-                        .tint(.red)
                     }
                 }
 
@@ -152,7 +141,6 @@ struct ExerciseExecutionView: View {
         VStack(spacing: 12) {
             if (readonly) {
                 Button("Close") {
-                    updateSets()
                     dismiss()
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
@@ -178,73 +166,47 @@ struct ExerciseExecutionView: View {
                 .foregroundColor(.white)
                 .font(.headline)
                 .cornerRadius(12)
-                .disabled(currentSetIndex >= setInputs.count ||
-                          setInputs[currentSetIndex].reps.isEmpty ||
-                          setInputs[currentSetIndex].weight.isEmpty)
+                .disabled(currentSetIndex >= workoutExercise.sets.count ||
+                          workoutExercise.sets[currentSetIndex].reps == 0 ||
+                          workoutExercise.sets[currentSetIndex].weight == 0)
             }
         }
         .padding()
     }
 
     // MARK: - Logic
-
-    private func updateSets() {
-        workoutExercise.sets.removeAll()
-    }
     
-    private func setupSetInputs() {
-        setInputs = workoutExercise.sets.enumerated().map { index, set in
-            SetInput(
-                reps: String(set.reps),
-                weight: String(Int(set.weight)),
-                isCompleted: set.isCompleted,
-                setNumber: set.setNumber
-            )
-        }
-
-        currentSetIndex = setInputs.firstIndex { !$0.isCompleted } ?? 0
+    private func setupInitialState() {
+        // Find the first incomplete set
+        currentSetIndex = workoutExercise.sets.firstIndex { !$0.isCompleted } ?? 0
     }
 
     private func addSet() {
-        let newSetNumber = setInputs.count + 1
+        let newSetNumber = workoutExercise.sets.count + 1
         let newSet = ExerciseSet(setNumber: newSetNumber, weight: 0, reps: 0)
+        newSet.workoutExercise = workoutExercise
         workoutExercise.sets.append(newSet)
-
-        let newInput = SetInput(
-            reps: "",
-            weight: "",
-            isCompleted: false,
-            setNumber: newSetNumber
-        )
-        setInputs.append(newInput)
     }
 
     private func deleteSet(at index: Int) {
         // Don't allow deleting if there's only one set
-        guard setInputs.count > 1, index < setInputs.count else { return }
+        guard workoutExercise.sets.count > 1, index < workoutExercise.sets.count else { return }
         
-        // Remove from both the UI state and the data model
-        setInputs.remove(at: index)
-        
-        if index < workoutExercise.sets.count {
-            workoutExercise.sets.remove(at: index)
-        }
+        // Remove from the data model
+        workoutExercise.sets.remove(at: index)
         
         // Update set numbers for remaining sets
-        for (newIndex, _) in setInputs.enumerated() {
-            setInputs[newIndex].setNumber = newIndex + 1
-            if newIndex < workoutExercise.sets.count {
-                workoutExercise.sets[newIndex].setNumber = newIndex + 1
-            }
+        for (newIndex, set) in workoutExercise.sets.enumerated() {
+            set.setNumber = newIndex + 1
         }
         
         // Adjust currentSetIndex if necessary
-        if currentSetIndex >= setInputs.count {
-            currentSetIndex = max(0, setInputs.count - 1)
+        if currentSetIndex >= workoutExercise.sets.count {
+            currentSetIndex = max(0, workoutExercise.sets.count - 1)
         }
         
         // Find the next incomplete set
-        if let nextIncompleteIndex = setInputs.firstIndex(where: { !$0.isCompleted }) {
+        if let nextIncompleteIndex = workoutExercise.sets.firstIndex(where: { !$0.isCompleted }) {
             currentSetIndex = nextIncompleteIndex
         }
     }
@@ -252,57 +214,44 @@ struct ExerciseExecutionView: View {
     // MARK: - Propagation Methods
     
     private func propagateRepsToBelow(fromIndex: Int, value: String) {
-        guard fromIndex < setInputs.count else { return }
+        guard fromIndex < workoutExercise.sets.count,
+              let repsValue = Int(value), repsValue > 0 else { return }
         
-        for index in (fromIndex + 1)..<setInputs.count {
-            if !setInputs[index].isCompleted {
-                setInputs[index].reps = value
+        for index in (fromIndex + 1)..<workoutExercise.sets.count {
+            if !workoutExercise.sets[index].isCompleted {
+                workoutExercise.sets[index].reps = repsValue
             }
         }
     }
     
     private func propagateWeightToBelow(fromIndex: Int, value: String) {
-        guard fromIndex < setInputs.count else { return }
+        guard fromIndex < workoutExercise.sets.count,
+              let weightValue = Double(value), weightValue > 0 else { return }
         
-        for index in (fromIndex + 1)..<setInputs.count {
-            if !setInputs[index].isCompleted {
-                setInputs[index].weight = value
+        for index in (fromIndex + 1)..<workoutExercise.sets.count {
+            if !workoutExercise.sets[index].isCompleted {
+                workoutExercise.sets[index].weight = weightValue
             }
         }
     }
 
     private func logAllSets() {
-        for (index, input) in setInputs.enumerated() {
-            guard index < workoutExercise.sets.count else { continue }
-
-            let set = workoutExercise.sets[index]
-
-            if let repsValue = Int(input.reps), let weightValue = Double(input.weight) {
-                set.reps = repsValue
-                set.weight = weightValue
-                set.isCompleted = true
-
-                setInputs[index].isCompleted = true
-            }
+        for set in workoutExercise.sets {
+            set.isCompleted = true
         }
-        
         dismiss()
     }
 
     private func logCurrentSet() {
-        guard currentSetIndex < setInputs.count else { return }
-        let input = setInputs[currentSetIndex]
-        guard let repsValue = Int(input.reps),
-              let weightValue = Double(input.weight),
-              currentSetIndex < workoutExercise.sets.count else { return }
-
+        guard currentSetIndex < workoutExercise.sets.count else { return }
         let set = workoutExercise.sets[currentSetIndex]
-        set.reps = repsValue
-        set.weight = weightValue
+        
+        // Validate that we have valid values
+        guard set.reps > 0 && set.weight > 0 else { return }
+        
         set.isCompleted = true
-        setInputs[currentSetIndex].isCompleted = true
 
-        if currentSetIndex < setInputs.count - 1 {
+        if currentSetIndex < workoutExercise.sets.count - 1 {
             currentSetIndex += 1
             focusedField = .reps(index: currentSetIndex)
             showPauseTimer = true
@@ -315,7 +264,7 @@ struct ExerciseExecutionView: View {
 // MARK: - Per-row view
 
 fileprivate struct SetRowView: View {
-    @Binding var input: ExerciseExecutionView.SetInput
+    @Binding var set: ExerciseSet
     let index: Int
     @FocusState.Binding var focusedField: ExerciseExecutionView.Field?
     let onRepsChange: (String) -> Void
@@ -329,46 +278,50 @@ fileprivate struct SetRowView: View {
                     .fill(Color.gray.opacity(0.3))
                     .frame(width: 30, height: 30)
 
-                Text(input.isCompleted ?  "✓" : "\(index + 1)")
+                Text(set.isCompleted ? "✓" : "\(index + 1)")
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(input.isCompleted ? .green : .white)
+                    .foregroundColor(set.isCompleted ? .green : .white)
             }
 
             // Reps Input
             RepsTextField(
-                text: $input.reps,
+                reps: $set.reps,
                 focusedField: $focusedField,
                 index: index,
+                isCompleted: set.isCompleted,
                 onChange: onRepsChange
             )
-            .foregroundColor(input.isCompleted ? .green : .white)
 
             // Weight Input
             WeightTextField(
-                text: $input.weight,
+                weight: $set.weight,
                 focusedField: $focusedField,
                 index: index,
+                isCompleted: set.isCompleted,
                 onChange: onWeightChange
             )
-            .foregroundColor(input.isCompleted ? .green : .white)
         }
     }
 }
 
 fileprivate struct RepsTextField: View {
-    @Binding var text: String
+    @Binding var reps: Int
     @FocusState.Binding var focusedField: ExerciseExecutionView.Field?
     let index: Int
+    let isCompleted: Bool
     let onChange: (String) -> Void
+    
+    @State private var textValue: String = ""
 
     var body: some View {
-        TextField("6", text: $text)
+        TextField("6", text: $textValue)
             .focused($focusedField, equals: .reps(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
             .multilineTextAlignment(.center)
             .keyboardType(.numberPad)
             .frame(maxWidth: .infinity, minHeight: 40)
+            .foregroundColor(isCompleted ? .green : .white)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.gray.opacity(0.3), lineWidth: 2)
@@ -377,25 +330,50 @@ fileprivate struct RepsTextField: View {
                             .fill(Color.black.opacity(0.3))
                     )
             )
-            .onChange(of: text) { _, newValue in
+            .onAppear {
+                // Initialize text value from the binding, but only if it's not 0
+                if reps > 0 {
+                    textValue = String(reps)
+                }
+            }
+            .onChange(of: textValue) { _, newValue in
+                // Only update the binding when there's actual text input
+                if let intValue = Int(newValue), intValue > 0 {
+                    reps = intValue
+                } else if newValue.isEmpty {
+                    // Don't set to 0 immediately - let user finish typing
+                }
                 onChange(newValue)
+            }
+            .onChange(of: reps) { _, newValue in
+                // Update text when binding changes from outside (like propagation)
+                if newValue > 0 {
+                    textValue = String(newValue)
+                } else if newValue == 0 && !textValue.isEmpty {
+                    // Only clear text if it wasn't already empty
+                    textValue = ""
+                }
             }
     }
 }
 
 fileprivate struct WeightTextField: View {
-    @Binding var text: String
+    @Binding var weight: Double
     @FocusState.Binding var focusedField: ExerciseExecutionView.Field?
     let index: Int
+    let isCompleted: Bool
     let onChange: (String) -> Void
+    
+    @State private var textValue: String = ""
 
     var body: some View {
-        TextField("14", text: $text)
+        TextField("14", text: $textValue)
             .focused($focusedField, equals: .weight(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
             .multilineTextAlignment(.center)
             .keyboardType(.decimalPad)
             .frame(maxWidth: .infinity, minHeight: 40)
+            .foregroundColor(isCompleted ? .green : .white)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.gray.opacity(0.3), lineWidth: 2)
@@ -404,12 +382,29 @@ fileprivate struct WeightTextField: View {
                             .fill(Color.black.opacity(0.3))
                     )
             )
-            .onChange(of: text) { _, newValue in
+            .onAppear {
+                // Initialize text value from the binding, but only if it's not 0
+                if weight > 0 {
+                    textValue = String(Int(weight))
+                }
+            }
+            .onChange(of: textValue) { _, newValue in
+                // Only update the binding when there's actual text input
+                if let doubleValue = Double(newValue), doubleValue > 0 {
+                    weight = doubleValue
+                } else if newValue.isEmpty {
+                    // Don't set to 0 immediately - let user finish typing
+                }
                 onChange(newValue)
+            }
+            .onChange(of: weight) { _, newValue in
+                // Update text when binding changes from outside (like propagation)
+                if newValue > 0 {
+                    textValue = String(Int(newValue))
+                } else if newValue == 0.0 && !textValue.isEmpty {
+                    // Only clear text if it wasn't already empty
+                    textValue = ""
+                }
             }
     }
 }
-
-// MARK: - Make WorkoutExercise Identifiable for sheet presentation
-extension WorkoutExercise: Identifiable {}
-extension Workout: Identifiable {}
