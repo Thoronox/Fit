@@ -214,10 +214,12 @@ struct WorkoutView: View {
     }
     
     private func deleteExercise(_ workoutExercise: WorkoutExercise, from workout: Workout) {
+        AppLogger.info(AppLogger.workout, "Deleting exercise '\(workoutExercise.exercise?.name ?? "Unknown")' from workout")
         withAnimation {
             if let index = workout.exercises.firstIndex(where: { $0.id == workoutExercise.id }) {
                 workout.exercises.remove(at: index)
                 reorderExercises(in: workout)
+                AppLogger.debug(AppLogger.workout, "Exercise removed and remaining exercises reordered")
             }
         }
     }

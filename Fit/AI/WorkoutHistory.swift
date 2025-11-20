@@ -37,6 +37,8 @@ struct SetHistoryItem {
 
 func getLast10WorkoutsHistory(from context: ModelContext) -> [WorkoutHistoryItem] {
     do {
+        AppLogger.debug(AppLogger.ai, "Fetching last 10 workouts from history")
+        
         // Create a fetch descriptor to get the last 10 workouts, sorted by date (newest first)
         let fetchDescriptor = FetchDescriptor<Workout>(
             sortBy: [SortDescriptor(\.date, order: .reverse)]
@@ -45,6 +47,8 @@ func getLast10WorkoutsHistory(from context: ModelContext) -> [WorkoutHistoryItem
         // Fetch all workouts first, then take the first 10
         let allWorkouts = try context.fetch(fetchDescriptor)
         let last10Workouts = Array(allWorkouts.prefix(10))
+        
+        AppLogger.debug(AppLogger.ai, "Processing \(last10Workouts.count) workouts for history")
         
         // Convert to WorkoutHistoryItem structures
         let workoutHistory: [WorkoutHistoryItem] = last10Workouts.map { workout in
@@ -92,10 +96,11 @@ func getLast10WorkoutsHistory(from context: ModelContext) -> [WorkoutHistoryItem
             )
         }
         
+        AppLogger.info(AppLogger.ai, "Successfully retrieved \(workoutHistory.count) workouts from history")
         return workoutHistory
         
     } catch {
-        print("Error fetching workout history: \(error)")
+        AppLogger.error(AppLogger.ai, "Failed to fetch workout history", error: error)
         return []
     }
 }

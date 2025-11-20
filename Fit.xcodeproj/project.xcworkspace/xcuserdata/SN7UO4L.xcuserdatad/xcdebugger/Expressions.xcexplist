@@ -3,12 +3,7 @@
    version = "1.0">
    <ContextStates>
       <ContextState
-         contextName = "closure #1 in closure #2 in closure #1 in ExerciseExecutionView.setsScroll.getter:ExerciseExecutionView.swift">
-         <PersistentStrings>
-            <PersistentString
-               value = "workoutExercise.sets.count">
-            </PersistentString>
-         </PersistentStrings>
+         contextName = "WorkoutGeneratorService.requestWorkoutFromAI(prompt:):AIWorkoutGenerator.swift">
       </ContextState>
       <ContextState
          contextName = "closure #3 in ExerciseExecutionView.body.getter:ExerciseExecutionView.swift">
@@ -27,6 +22,22 @@
          </PersistentStrings>
       </ContextState>
       <ContextState
+         contextName = "GeminiWorkoutGeneratorService.generateWorkout(modelContext:duration:trainingType:difficulty:workoutSplit:exercises:):GeminiWorkoutGenerator.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "prompt">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "closure #1 in closure #2 in closure #1 in ExerciseExecutionView.setsScroll.getter:ExerciseExecutionView.swift">
+         <PersistentStrings>
+            <PersistentString
+               value = "workoutExercise.sets.count">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
          contextName = "closure #3 in WorkoutView.body.getter:WorkoutView.swift">
          <PersistentStrings>
             <PersistentString
@@ -36,9 +47,6 @@
                value = "currentWorkout.exercises[0]">
             </PersistentString>
          </PersistentStrings>
-      </ContextState>
-      <ContextState
-         contextName = "WorkoutGeneratorService.requestWorkoutFromAI(prompt:):AIWorkoutGenerator.swift">
       </ContextState>
    </ContextStates>
 </VariablesViewState>

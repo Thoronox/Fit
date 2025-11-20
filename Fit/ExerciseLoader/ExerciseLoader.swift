@@ -108,6 +108,7 @@ class ExerciseLoader {
     
     /// Deletes all exercises from the context
     static func deleteAllExercises(context: ModelContext) throws {
+        AppLogger.info(AppLogger.exercise, "Deleting all exercises from database")
         let descriptor = FetchDescriptor<Exercise>()
         let exercises = try context.fetch(descriptor)
         
@@ -116,12 +117,15 @@ class ExerciseLoader {
         }
         
         try context.save()
+        AppLogger.info(AppLogger.exercise, "Successfully deleted \(exercises.count) exercises")
     }
     
     /// Deletes all exercises and reloads from JSON
     static func resetExercises(context: ModelContext) throws {
+        AppLogger.warning(AppLogger.exercise, "Resetting all exercises - deleting and reloading from JSON")
         try deleteAllExercises(context: context)
         _ = try loadExercisesFromJSON(context: context)
+        AppLogger.info(AppLogger.exercise, "Exercise reset completed")
     }
 }
 

@@ -1,7 +1,7 @@
 import SwiftUI
 import Foundation
 import SwiftData
-import os
+import os.log
 
 // MARK: - Constants
 
@@ -18,7 +18,6 @@ private enum GeminiConstants {
 
 // MARK: - URLSession Delegate for TLS Bypass
 class TLSBypassDelegate: NSObject, URLSessionDelegate {
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Fit", category: "TLSBypass")
     
     func urlSession(
         _ session: URLSession,
@@ -35,7 +34,7 @@ class TLSBypassDelegate: NSObject, URLSessionDelegate {
         // WARNING: Only use this when behind a trusted corporate proxy
         if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
            let serverTrust = challenge.protectionSpace.serverTrust {
-            logger.warning("⚠️ Bypassing TLS certificate validation for: \(challenge.protectionSpace.host)")
+            AppLogger.warning(AppLogger.network, "⚠️ Bypassing TLS certificate validation for: \(challenge.protectionSpace.host)")
             let credential = URLCredential(trust: serverTrust)
             completionHandler(.useCredential, credential)
         } else {
@@ -54,9 +53,6 @@ class GeminiWorkoutGeneratorService: ObservableObject {
     private let apiKey = Config.geminiAPIKey
     private let apiURL = Config.geminiAPIURL
     private var exercises: [Exercise] = []
-    
-    // Logger
-    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Fit", category: "GeminiWorkoutGenerator")
     
     // Custom URLSession with TLS bypass for corporate proxies
     private lazy var urlSession: URLSession = {
@@ -86,7 +82,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             errorMessage = nil
         }
         
-        logger.info("Starting workout generation: duration=\(duration), type=\(trainingType), difficulty=\(difficulty), split=\(workoutSplit)")
+        AppLogger.info(AppLogger.ai, "Starting workout generation: duration=\(duration), type=\(trainingType), difficulty=\(difficulty), split=\(workoutSplit)")
         
         let workoutHistory = getWorkoutHistoryForAI(from: modelContext)
         
@@ -97,7 +93,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             workoutSplit: workoutSplit,
             history: workoutHistory
         )
-        logger.debug("Generated prompt with \(workoutHistory.count) characters of workout history")
+        AppLogger.debug(AppLogger.ai, "Generated prompt with \(workoutHistory.count) characters of workout history")
         
         do {
             let workout = try await requestWorkoutFromGemini(prompt: prompt)
@@ -108,10 +104,10 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             }
             
             await setGeneratedWorkout(workout)
-            logger.info("Successfully generated workout: \(workout.name)")
+            AppLogger.info(AppLogger.ai, "Successfully generated workout: \(workout.name)")
             
         } catch {
-            logger.error("Failed to generate workout: \(error.localizedDescription)")
+            AppLogger.error(AppLogger.ai, "Failed to generate workout: \(error.localizedDescription)")
             await setError(error.localizedDescription)
         }
     }
@@ -133,25 +129,25 @@ class GeminiWorkoutGeneratorService: ObservableObject {
     /// Validates the generated workout meets basic requirements
     private func validateWorkout(_ workout: Workout) -> Bool {
         guard !workout.exercises.isEmpty else {
-            logger.warning("Workout validation failed: no exercises")
+            AppLogger.warning(AppLogger.ai, "Workout validation failed: no exercises")
             return false
         }
         
         guard workout.exercises.count >= GeminiConstants.minExercisesPerWorkout,
               workout.exercises.count <= GeminiConstants.maxExercisesPerWorkout else {
-            logger.warning("Workout validation failed: invalid exercise count \(workout.exercises.count)")
+            AppLogger.warning(AppLogger.ai, "Workout validation failed: invalid exercise count \(workout.exercises.count)")
             return false
         }
         
         for workoutExercise in workout.exercises {
             guard !workoutExercise.sets.isEmpty else {
-                logger.warning("Workout validation failed: exercise has no sets")
+                AppLogger.warning(AppLogger.ai, "Workout validation failed: exercise has no sets")
                 return false
             }
             
             guard workoutExercise.sets.count >= GeminiConstants.minSetsPerExercise,
                   workoutExercise.sets.count <= GeminiConstants.maxSetsPerExercise else {
-                logger.warning("Workout validation failed: invalid set count")
+                AppLogger.warning(AppLogger.ai, "Workout validation failed: invalid set count")
                 return false
             }
         }
@@ -215,7 +211,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             throw GeminiWorkoutGeneratorError.invalidURL
         }
         
-        print("Using API Key \(apiKey)")
+        AppLogger.debug(AppLogger.network, "API Key configured for Gemini API")
         
         let requestBody: [String: Any] = [
             "contents": [
@@ -237,29 +233,29 @@ class GeminiWorkoutGeneratorService: ObservableObject {
         let (data, response) = try await urlSession.data(for: request)
         
         if let httpResponse = response as? HTTPURLResponse {
-            print("HTTP Status Code: \(httpResponse.statusCode)")
+            AppLogger.debug(AppLogger.network, "HTTP Status Code: \(httpResponse.statusCode)")
             
             if let responseString = String(data: data, encoding: .utf8) {
-                print("Response data: \(responseString)")
+                AppLogger.debug(AppLogger.network, "Response data: \(responseString)")
             }
             
             switch httpResponse.statusCode {
             case 200:
                 break // Success, continue
             case 400:
-                print("400 Error: Bad request")
+                AppLogger.error(AppLogger.network, "400 Error: Bad request")
                 throw GeminiWorkoutGeneratorError.badRequest
             case 401:
-                print("401 Error: Invalid API key")
+                AppLogger.error(AppLogger.network, "401 Error: Invalid API key")
                 throw GeminiWorkoutGeneratorError.invalidAPIKey
             case 403:
-                print("403 Error: Forbidden - check API permissions")
+                AppLogger.error(AppLogger.network, "403 Error: Forbidden - check API permissions")
                 throw GeminiWorkoutGeneratorError.forbidden
             case 429:
-                print("429 Error: Rate limit exceeded")
+                AppLogger.error(AppLogger.network, "429 Error: Rate limit exceeded")
                 throw GeminiWorkoutGeneratorError.rateLimitExceeded
             default:
-                print("HTTP Error: \(httpResponse.statusCode)")
+                AppLogger.error(AppLogger.network, "HTTP Error: \(httpResponse.statusCode)")
                 throw GeminiWorkoutGeneratorError.apiError
             }
         }
@@ -267,11 +263,11 @@ class GeminiWorkoutGeneratorService: ObservableObject {
         do {
             let geminiResponse = try JSONDecoder().decode(GeminiResponse.self, from: data)
             let workoutJSON = geminiResponse.candidates.first?.content.parts.first?.text ?? ""
-            print("Gemini Response JSON: \(workoutJSON)")
+            AppLogger.debug(AppLogger.ai, "Gemini Response JSON: \(workoutJSON)")
             
             return try parseWorkoutFromJSON(workoutJSON)
         } catch {
-            print("JSON Decode Error: \(error)")
+            AppLogger.error(AppLogger.ai, "JSON Decode Error: \(error.localizedDescription)")
             throw GeminiWorkoutGeneratorError.invalidJSON
         }
     }
@@ -289,7 +285,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
             cleanedJSON = String(cleanedJSON[startIndex...endIndex])
         }
         
-        print("Cleaned JSON: \(cleanedJSON)")
+        AppLogger.debug(AppLogger.ai, "Cleaned JSON: \(cleanedJSON)")
         
         guard let jsonData = cleanedJSON.data(using: .utf8) else {
             throw GeminiWorkoutGeneratorError.invalidJSON
@@ -301,7 +297,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
         let workout = Workout(name: workoutData.workoutName)
   
         for ii in 0..<exercises.count {
-            print ("\(ii) : \(exercises[ii].id) , \(exercises[ii].name)")
+            AppLogger.debug(AppLogger.ai, "Exercise \(ii): \(exercises[ii].id), \(exercises[ii].name)")
         }
         
         // Create exercises and sets
@@ -324,7 +320,7 @@ class GeminiWorkoutGeneratorService: ObservableObject {
                 workoutExercise.workout = workout
                 workout.exercises.append(workoutExercise)
             } else {
-                print("Exercise '\(exerciseData.name)' not found")
+                AppLogger.warning(AppLogger.ai, "Exercise '\(exerciseData.name)' not found in available exercises")
             }
             /*
             let exercise = Exercise(

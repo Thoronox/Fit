@@ -30,12 +30,14 @@ class OneRepMaxService {
 
     func getCurrentOneRepMaxByExerciseName(_ exerciseName: String) -> OneRepMaxHistory? {
         do {
+            AppLogger.debug(AppLogger.oneRepMax, "Fetching current 1RM for exercise: \(exerciseName)")
+            
             // Fetch all exercises
             let allExercises = try modelContext.fetch(FetchDescriptor<Exercise>())
             
             // Find the exercise with the specified name
             guard let exercise = allExercises.first(where: { $0.name.lowercased() == exerciseName.lowercased() }) else {
-                print("Exercise '\(exerciseName)' not found")
+                AppLogger.warning(AppLogger.oneRepMax, "Exercise '\(exerciseName)' not found in database")
                 return nil
             }
             
@@ -47,10 +49,14 @@ class OneRepMaxService {
                 .filter { $0.exerciseId == exercise.id }
                 .sorted { $0.date > $1.date }
             
+            if let latestRecord = exerciseRecords.first {
+                AppLogger.debug(AppLogger.oneRepMax, "Current 1RM for \(exerciseName): \(latestRecord.oneRepMax)kg")
+            }
+            
             return exerciseRecords.first
             
         } catch {
-            print("Error fetching data: \(error)")
+            AppLogger.error(AppLogger.oneRepMax, "Failed to fetch 1RM for exercise: \(exerciseName)", error: error)
             return nil
         }
     }
