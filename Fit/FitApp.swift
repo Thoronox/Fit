@@ -16,8 +16,6 @@ struct FitApp: App {
             Exercise.self,
             WorkoutExercise.self,
             ExerciseSet.self,
-            WorkoutTemplate.self,
-            TemplateExercise.self,
             PersonalRecord.self,
             UserProfile.self,
             OneRepMaxHistory.self

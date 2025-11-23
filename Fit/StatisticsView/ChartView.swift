@@ -62,10 +62,6 @@ struct DualAxisChartView: View {
     
     var body: some View {
         VStack {
-            Text("\(oneRepMaxHistory[0].exercise!.name) Progress")
-//                .font(.title2)
-                .padding()
-            
             Chart {
                 // Left axis - One Rep Max (Line Chart)
                 ForEach(orpData, id: \.number) { data in

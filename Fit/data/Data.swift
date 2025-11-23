@@ -201,41 +201,6 @@ enum ExerciseType: String, CaseIterable, Codable {
     case olympic = "Olympic Lifting"
 }
 
-// MARK: - Workout Templates and Programs
-
-@Model
-class WorkoutTemplate {
-    var id: UUID
-    var name: String
-    var longtext: String?
-    var exercises: [TemplateExercise] = []
-    var estimatedDuration: TimeInterval?
-    var targetMuscleGroups: [MuscleGroup] = []
-    
-    init(name: String) {
-        self.id = UUID()
-        self.name = name
-    }
-}
-
-@Model
-class TemplateExercise {
-    var id: UUID
-    var exercise: Exercise?
-    var order: Int
-    var targetSets: Int
-    var targetRepsRange: ClosedRange<Int>? // e.g., 8...12
-    var targetWeight: Double?
-    var restTime: Int?
-    
-    init(exercise: Exercise, order: Int, targetSets: Int) {
-        self.id = UUID()
-        self.exercise = exercise
-        self.order = order
-        self.targetSets = targetSets
-    }
-}
-
 // MARK: - Progress Tracking
 
 @Model
@@ -547,4 +512,3 @@ extension WorkoutExercise {
         self.restTime = lastPerformance.restTime
     }
 }
-
