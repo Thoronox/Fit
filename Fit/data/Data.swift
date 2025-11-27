@@ -452,7 +452,7 @@ extension WorkoutExercise {
     
     /// Improved method to find last performance with detailed logging
     func findLastPerformance(in context: ModelContext) -> WorkoutExercise? {
-        guard let currentExercise = self.exercise else {
+        guard self.exercise != nil else {
             print("❌ No exercise assigned to this WorkoutExercise")
             return nil
         }

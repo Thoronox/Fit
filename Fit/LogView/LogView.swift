@@ -16,7 +16,7 @@ struct LogView: View {
                 }) {
                     Image(systemName: "timer")
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appPrimary)
                 }
                 .buttonStyle(.plain) // or .bordered, etc.
 
@@ -25,7 +25,7 @@ struct LogView: View {
                 }) {
                     Image(systemName: "gearshape")
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appPrimary)
                 }
                 .buttonStyle(.plain) // or .bordered, etc.
             }

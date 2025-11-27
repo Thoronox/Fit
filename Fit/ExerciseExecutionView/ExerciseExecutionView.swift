@@ -162,7 +162,7 @@ struct ExerciseExecutionView: View {
                     logCurrentSet()
                 }
                 .frame(maxWidth: .infinity, minHeight: 50)
-                .background(Color.red)
+                .background(Color.appPrimary)
                 .foregroundColor(.white)
                 .font(.headline)
                 .cornerRadius(12)

@@ -45,7 +45,7 @@ struct ExercisePauseView: View {
                 }) {
                     Image(systemName: "forward.circle")
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appPrimary)
                         .font(.system(size: 40))
                 }
                 .buttonStyle(.plain) // or .bordered, etc.

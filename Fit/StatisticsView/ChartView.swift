@@ -81,7 +81,7 @@ struct DualAxisChartView: View {
                         y: .value("Scaled Volume", data.normalizedTotalVolume * getMaxOneRepMax()), // Scale to match One Rep Max range
                         series: .value("Volume", "Volume") // Separate series for right axis
                     )
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color.appPrimary)
                     .lineStyle(StrokeStyle(lineWidth: 3))
                     .symbol(Circle())
                     .interpolationMethod(.catmullRom) // Smooth line

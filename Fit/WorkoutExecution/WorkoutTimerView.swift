@@ -19,12 +19,12 @@ struct WorkoutTimerView: View {
                     Circle()
                         .stroke(lineWidth: 2)
                         .frame(width: 24, height: 24)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(Color.appPrimary)
                     if isSelected {
                         Circle()
                             .frame(width: 12, height: 12)
                             .transition(.scale)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Color.appPrimary)
                     }
                 }
                 .animation(.easeInOut(duration: 0.2), value: isSelected)

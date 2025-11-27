@@ -67,7 +67,7 @@ struct FitApp: App {
                 }
                 .tabItem { Label("Data", systemImage: "server.rack") }
             }
-            .tint(.red)
+            .tint(AppTheme.tintColor)
             .preferredColorScheme(.dark)
         }
         .modelContainer(sharedModelContainer)

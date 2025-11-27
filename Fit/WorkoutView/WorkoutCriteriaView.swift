@@ -35,7 +35,7 @@ struct CriteriaMenu: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .frame(minWidth: 80)
-            .background(Color.red)
+            .background(Color.appPrimary)
             .cornerRadius(8)
         }
     }

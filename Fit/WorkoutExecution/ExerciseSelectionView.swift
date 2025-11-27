@@ -245,7 +245,7 @@ struct CompoundBadge: View {
             .fontWeight(.bold)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.red.opacity(0.7))
+            .background(Color.appPrimaryBackground)
             .foregroundColor(.white)
             .cornerRadius(4)
     }
