@@ -166,15 +166,20 @@ struct ExerciseExecutionView: View {
                 .foregroundColor(.white)
                 .font(.headline)
                 .cornerRadius(12)
-                .disabled(currentSetIndex >= workoutExercise.sets.count ||
-                          workoutExercise.sets[currentSetIndex].reps == 0 ||
-                          workoutExercise.sets[currentSetIndex].weight == 0)
+                .disabled(shouldDisableLogButton)
             }
         }
         .padding()
     }
 
     // MARK: - Logic
+    
+    private var shouldDisableLogButton: Bool {
+        guard currentSetIndex < workoutExercise.sets.count else { return true }
+        let currentSet = workoutExercise.sets[currentSetIndex]
+        // Button is disabled if reps is 0 or weight is negative
+        return currentSet.reps == 0 || currentSet.weight < 0
+    }
     
     private func setupInitialState() {
         // Find the first incomplete set
@@ -226,7 +231,7 @@ struct ExerciseExecutionView: View {
     
     private func propagateWeightToBelow(fromIndex: Int, value: String) {
         guard fromIndex < workoutExercise.sets.count,
-              let weightValue = Double(value), weightValue > 0 else { return }
+              let weightValue = Double(value), weightValue >= 0 else { return }
         
         for index in (fromIndex + 1)..<workoutExercise.sets.count {
             if !workoutExercise.sets[index].isCompleted {
@@ -246,10 +251,15 @@ struct ExerciseExecutionView: View {
         guard currentSetIndex < workoutExercise.sets.count else { return }
         let set = workoutExercise.sets[currentSetIndex]
         
-        // Validate that we have valid values
-        guard set.reps > 0 && set.weight > 0 else { return }
+        // Validate that we have valid values (allow weight of 0 for bodyweight exercises)
+        guard set.reps > 0 && set.weight >= 0 else { return }
         
         set.isCompleted = true
+        
+        // Mark all subsequent sets as not completed so they can be re-logged
+        for index in (currentSetIndex + 1)..<workoutExercise.sets.count {
+            workoutExercise.sets[index].isCompleted = false
+        }
 
         if currentSetIndex < workoutExercise.sets.count - 1 {
             currentSetIndex += 1
@@ -312,10 +322,8 @@ fileprivate struct RepsTextField: View {
     let isCompleted: Bool
     let onChange: (String) -> Void
     
-    @State private var textValue: String = ""
-
     var body: some View {
-        TextField("6", text: $textValue)
+        TextField("6", value: $reps, format: .number)
             .focused($focusedField, equals: .reps(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
             .multilineTextAlignment(.center)
@@ -330,29 +338,8 @@ fileprivate struct RepsTextField: View {
                             .fill(Color.black.opacity(0.3))
                     )
             )
-            .onAppear {
-                // Initialize text value from the binding, but only if it's not 0
-                if reps > 0 {
-                    textValue = String(reps)
-                }
-            }
-            .onChange(of: textValue) { _, newValue in
-                // Only update the binding when there's actual text input
-                if let intValue = Int(newValue), intValue > 0 {
-                    reps = intValue
-                } else if newValue.isEmpty {
-                    // Don't set to 0 immediately - let user finish typing
-                }
-                onChange(newValue)
-            }
             .onChange(of: reps) { _, newValue in
-                // Update text when binding changes from outside (like propagation)
-                if newValue > 0 {
-                    textValue = String(newValue)
-                } else if newValue == 0 && !textValue.isEmpty {
-                    // Only clear text if it wasn't already empty
-                    textValue = ""
-                }
+                onChange(String(newValue))
             }
     }
 }
@@ -364,10 +351,8 @@ fileprivate struct WeightTextField: View {
     let isCompleted: Bool
     let onChange: (String) -> Void
     
-    @State private var textValue: String = ""
-
     var body: some View {
-        TextField("14", text: $textValue)
+        TextField("14", value: $weight, format: .number)
             .focused($focusedField, equals: .weight(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
             .multilineTextAlignment(.center)
@@ -382,29 +367,8 @@ fileprivate struct WeightTextField: View {
                             .fill(Color.black.opacity(0.3))
                     )
             )
-            .onAppear {
-                // Initialize text value from the binding, but only if it's not 0
-                if weight > 0 {
-                    textValue = String(Int(weight))
-                }
-            }
-            .onChange(of: textValue) { _, newValue in
-                // Only update the binding when there's actual text input
-                if let doubleValue = Double(newValue), doubleValue > 0 {
-                    weight = doubleValue
-                } else if newValue.isEmpty {
-                    // Don't set to 0 immediately - let user finish typing
-                }
-                onChange(newValue)
-            }
             .onChange(of: weight) { _, newValue in
-                // Update text when binding changes from outside (like propagation)
-                if newValue > 0 {
-                    textValue = String(Int(newValue))
-                } else if newValue == 0.0 && !textValue.isEmpty {
-                    // Only clear text if it wasn't already empty
-                    textValue = ""
-                }
+                onChange(String(Int(newValue)))
             }
     }
 }

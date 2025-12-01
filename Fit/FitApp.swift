@@ -45,6 +45,7 @@ struct FitApp: App {
       }()
     
     var body: some Scene {
+        
         WindowGroup {
             TabView {
                 NavigationStack {
