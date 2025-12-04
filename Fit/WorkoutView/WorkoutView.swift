@@ -10,44 +10,34 @@ class WorkoutCriteria: ObservableObject {
 
 struct WorkoutView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Workout.date, order: .reverse) private var workouts: [Workout]
     @Query private var exercises: [Exercise]
 
     @StateObject private var criteria = WorkoutCriteria()
 
     @State private var startWorkout: Bool = false
-    @State private var selectedWorkoutExercise: WorkoutExercise?
     @State private var currentWorkout: Workout?
-    @State private var exerciseToDelete: WorkoutExercise?
-    @State private var showDeleteAlert = false
-    @State private var showRetry = false
-    @State private var workoutGenerator: GeminiWorkoutGeneratorService?
+    @State private var selectedExerciseForDetails: WorkoutExercise?
 
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
             criteriaSection
             workoutContentSection
             startWorkoutButton
         }
         .navigationTitle("Workout")
+        .navigationBarTitleDisplayMode(.large)
         .onAppear(perform: handleOnAppear)
-        .onChange(of: criteria.durationSelected) { generateWorkout(modelContext: modelContext) }
-        .onChange(of: criteria.trainingTypeSelected) { generateWorkout(modelContext: modelContext) }
-        .onChange(of: criteria.difficultySelected) { generateWorkout(modelContext: modelContext) }
-        .onChange(of: criteria.workoutSplitSelected) { generateWorkout(modelContext: modelContext) }
-        .sheet(isPresented: $startWorkout) {
+        .onReceive(criteria.objectWillChange) { _ in
+            generateWorkout(modelContext: modelContext)
+        }
+        .fullScreenCover(isPresented: $startWorkout) {
             workoutSheet
         }
-        .alert("Delete Exercise", isPresented: $showDeleteAlert) {
-            deleteAlert
-        } message: {
-            deleteAlertMessage
+        .sheet(item: $selectedExerciseForDetails) { workoutExercise in
+            ExerciseDetailsView(workoutExercise: workoutExercise)
         }
         .onReceive(NotificationCenter.default.publisher(for: .workoutFinished)) { _ in
-            currentWorkout = nil
-        }
-        .sheet(item: $selectedWorkoutExercise) { workoutExercise in
-            ExerciseExecutionView(workoutExercise: workoutExercise, readonly: true)
+            currentWorkout = computeNewWorkout()
         }
     }
     
@@ -72,21 +62,16 @@ struct WorkoutView: View {
     private func workoutList(for workout: Workout) -> some View {
         List {
             ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                ExerciseView(
-                    workoutExercise: workoutExercise,
-                    action: {
-                        selectedWorkoutExercise = workoutExercise
-                    },
-                    onExerciseReplaced: { newExercise in
-                        workoutExercise.exercise = newExercise                        
-                        workoutExercise.loadSetsFromLastPerformance(in: modelContext)
-                    },
-                    onExerciseDeleted: {
-                        exerciseToDelete = workoutExercise
-                        showDeleteAlert = true
+                StaticExerciseView(workoutExercise: workoutExercise)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.visible, edges: .bottom)
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                    .listRowBackground(Color.clear)
+                    .padding()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedExerciseForDetails = workoutExercise
                     }
-                )
-                .listRowBackground(Color.black)
             }
         }
         .listStyle(.plain)
@@ -94,29 +79,8 @@ struct WorkoutView: View {
     
     @ViewBuilder
     private var loadingOrErrorSection: some View {
-        if showRetry == false {
-            ProgressView("Loading new workout...")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            VStack {
-                Spacer()
-                Text("Error loading AI generated workout")
-                retryButton
-                Spacer()
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var retryButton: some View {
-        Button("Retry") {
-            showRetry = false
-            Task {
-                generateWorkout(modelContext: modelContext)
-            }
-        }
-        .buttonStyle(.borderedProminent)
-        .padding(.bottom)
+        ProgressView("Loading new workout...")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     @ViewBuilder
@@ -138,68 +102,20 @@ struct WorkoutView: View {
         }
     }
     
-    @ViewBuilder
-    private var deleteAlert: some View {
-        Button("Cancel", role: .cancel) {
-            exerciseToDelete = nil
-        }
-        Button("Delete", role: .destructive) {
-            if let workoutExercise = exerciseToDelete,
-               let workout = currentWorkout {
-                deleteExercise(workoutExercise, from: workout)
-            }
-            exerciseToDelete = nil
-        }
-    }
-    
-    @ViewBuilder
-    private var deleteAlertMessage: some View {
-        Text("Are you sure you want to delete \(exerciseToDelete?.exercise?.name ?? "this exercise")? This action cannot be undone.")
-    }
-    
     // MARK: - Helper Methods
     
     private func handleOnAppear() {
-        if workoutGenerator == nil {
-            workoutGenerator = GeminiWorkoutGeneratorService()
-        }
-        
         if currentWorkout == nil {
-            Task {
-                generateWorkout(modelContext: modelContext)
-            }
+            generateWorkout(modelContext: modelContext)
         }
     }
 
     private func generateWorkout(modelContext: ModelContext) {
-        if workoutGenerator == nil {
-            workoutGenerator = GeminiWorkoutGeneratorService()
-        }
-        
-        guard let generator = workoutGenerator else { return }
-        
-        currentWorkout = nil
-        Task {
-            await generator.generateWorkout(
-                modelContext: modelContext,
-                duration: criteria.durationSelected,
-                trainingType: criteria.trainingTypeSelected,
-                difficulty: criteria.difficultySelected,
-                workoutSplit: criteria.workoutSplitSelected,
-                exercises: exercises
-            )
-            currentWorkout = generator.generatedWorkout
-
-            if currentWorkout == nil {
-                showRetry = true
-            } else {
-                showRetry = false
-            }
-        }
+        currentWorkout = computeNewWorkout()
     }
     
     private func computeNewWorkout() -> Workout {
-        let newWorkout = Workout(name: "Workout \(workouts.count + 1)")
+        let newWorkout = Workout(name: "Workout", date: Date())
         
         for (index, exercise) in exercises.prefix(4).enumerated() {
             let workoutExercise = WorkoutExercise(exercise: exercise, order: index)
@@ -212,30 +128,49 @@ struct WorkoutView: View {
         }
         return newWorkout
     }
-    
-    private func deleteExercise(_ workoutExercise: WorkoutExercise, from workout: Workout) {
-        AppLogger.info(AppLogger.workout, "Deleting exercise '\(workoutExercise.exercise?.name ?? "Unknown")' from workout")
-        withAnimation {
-            if let index = workout.exercises.firstIndex(where: { $0.id == workoutExercise.id }) {
-                workout.exercises.remove(at: index)
-                reorderExercises(in: workout)
-                AppLogger.debug(AppLogger.workout, "Exercise removed and remaining exercises reordered")
-            }
-        }
-    }
-    
-    private func reorderExercises(in workout: Workout) {
-        for (index, exercise) in workout.exercises.enumerated() {
-            exercise.order = index
-        }
-    }
 }
 
 extension Notification.Name {
     static let workoutFinished = Notification.Name("workoutFinished")
 }
 
-
-
-
-
+#Preview {
+    NavigationStack {
+        WorkoutView()
+            .modelContainer(for: [Exercise.self, Workout.self, WorkoutExercise.self, ExerciseSet.self]) { result in
+                if case .success(let container) = result {
+                    let context = container.mainContext
+                    
+                    // Create sample exercises with valid UUID strings
+                    let exercise1 = Exercise(id: "A1B2C3D4-E5F6-7890-ABCD-EF1234567890", name: "Bench Press", primaryMuscleGroup: .chest, exerciseType: .strength)
+                    exercise1.equipment = .barbell
+                    exercise1.isCompound = true
+                    exercise1.instructions = "Lie on a flat bench with your feet flat on the ground. Grip the bar with hands slightly wider than shoulder-width apart."
+                    
+                    let exercise2 = Exercise(id: "B2C3D4E5-F6A7-8901-BCDE-F12345678901", name: "Barbell Squat", primaryMuscleGroup: .quadriceps, exerciseType: .strength)
+                    exercise2.equipment = .barbell
+                    exercise2.isCompound = true
+                    exercise2.secondaryMuscleGroups = [.glutes, .hamstrings]
+                    
+                    let exercise3 = Exercise(id: "C3D4E5F6-A7B8-9012-CDEF-123456789012", name: "Deadlift", primaryMuscleGroup: .back, exerciseType: .strength)
+                    exercise3.equipment = .barbell
+                    exercise3.isCompound = true
+                    exercise3.secondaryMuscleGroups = [.hamstrings, .glutes]
+                    
+                    let exercise4 = Exercise(id: "D4E5F6A7-B8C9-0123-DEF1-234567890123", name: "Overhead Press", primaryMuscleGroup: .shoulders, exerciseType: .strength)
+                    exercise4.equipment = .barbell
+                    exercise4.isCompound = true
+                    exercise4.secondaryMuscleGroups = [.triceps]
+                    
+                    // Insert exercises into context
+                    context.insert(exercise1)
+                    context.insert(exercise2)
+                    context.insert(exercise3)
+                    context.insert(exercise4)
+                    
+                    // Save the context
+                    try? context.save()
+                }
+            }
+    }
+}

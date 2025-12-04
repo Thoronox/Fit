@@ -8,7 +8,19 @@ struct ExerciseView: View {
     let action: () -> Void
     
     let onExerciseReplaced: ((Exercise) -> Void)?
-    let onExerciseDeleted: (() -> Void)? // Make sure this is not nil
+    let onExerciseDeleted: (() -> Void)?
+    
+    init(
+        workoutExercise: WorkoutExercise,
+        action: @escaping () -> Void,
+        onExerciseReplaced: ((Exercise) -> Void)? = nil,
+        onExerciseDeleted: (() -> Void)? = nil
+    ) {
+        self.workoutExercise = workoutExercise
+        self.action = action
+        self.onExerciseReplaced = onExerciseReplaced
+        self.onExerciseDeleted = onExerciseDeleted
+    }
 
     var completedSets: Int {
         workoutExercise.sets.filter { $0.isCompleted }.count
@@ -83,3 +95,4 @@ struct ExerciseView: View {
         }
     }
 }
+

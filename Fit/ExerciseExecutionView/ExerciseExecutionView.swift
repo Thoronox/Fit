@@ -19,7 +19,7 @@ struct ExerciseExecutionView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if (!readonly) {
-                    WorkoutTimerView()
+                    // WorkoutTimerView()
                 }
 
                 headerView

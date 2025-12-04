@@ -63,19 +63,7 @@ struct OneRepMaxStatisticsTab: View {
                     Section {
                         DualAxisChartView(oneRepMaxHistory: orpHistory)
                             .frame(height: 200)
-                            .padding(.vertical, 8)
-                        
-                        ForEach(orpHistory, id: \.date) { orp in
-                            HStack {
-                                Text(orp.date, style: .date)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
-                                Spacer()
-                                Text("\(orp.oneRepMax, specifier: "%.1f") kg")
-                                    .font(.body)
-                                    .fontWeight(.semibold)
-                            }
-                        }
+                            .padding(.vertical, 8)                        
                     } header: {
                         HStack {
                             Image(systemName: "figure.strengthtraining.traditional")
@@ -377,8 +365,150 @@ struct RecordTypeBadge: View {
     }
 }
 
-#Preview {
+#Preview("Statistics View") {
     StatisticsView()
-        .modelContainer(for: Workout.self, inMemory: true)
+        .modelContainer(previewContainer)
         .preferredColorScheme(.dark)
+}
+
+#Preview("With Sample Data") {
+    StatisticsView()
+        .modelContainer(previewContainerWithData)
+        .preferredColorScheme(.dark)
+}
+
+// MARK: - Preview Helpers
+@MainActor
+private var previewContainer: ModelContainer {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Workout.self, Exercise.self, WorkoutExercise.self, ExerciseSet.self,
+        PersonalRecord.self, OneRepMaxHistory.self, UserProfile.self,
+        configurations: config
+    )
+    return container
+}
+
+@MainActor
+private var previewContainerWithData: ModelContainer {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(
+        for: Workout.self, Exercise.self, WorkoutExercise.self, ExerciseSet.self,
+        PersonalRecord.self, OneRepMaxHistory.self, UserProfile.self,
+        configurations: config
+    )
+    
+    let context = container.mainContext
+    
+    // Create multiple exercises for variety
+    let benchPress = Exercise(
+        id: UUID().uuidString,
+        name: "Bench Press",
+        primaryMuscleGroup: .chest,
+        exerciseType: .strength
+    )
+    context.insert(benchPress)
+    
+    let squat = Exercise(
+        id: UUID().uuidString,
+        name: "Squat",
+        primaryMuscleGroup: .quadriceps,
+        exerciseType: .strength
+    )
+    context.insert(squat)
+    
+    let deadlift = Exercise(
+        id: UUID().uuidString,
+        name: "Deadlift",
+        primaryMuscleGroup: .back,
+        exerciseType: .strength
+    )
+    context.insert(deadlift)
+    
+    let shoulderPress = Exercise(
+        id: UUID().uuidString,
+        name: "Shoulder Press",
+        primaryMuscleGroup: .shoulders,
+        exerciseType: .strength
+    )
+    context.insert(shoulderPress)
+    
+    // Create sample workouts with more data
+    for i in 0..<10 {
+        let workout = Workout(
+            name: i % 2 == 0 ? "Push Day" : "Pull Day",
+            date: Calendar.current.date(byAdding: .day, value: -(i * 3), to: Date())!
+        )
+        workout.duration = Double(3000 + i * 200)
+        context.insert(workout)
+        
+        // Add exercises to workout
+        let exercise = [benchPress, squat, deadlift, shoulderPress][i % 4]
+        let workoutExercise = WorkoutExercise(exercise: exercise, order: 0)
+        workoutExercise.workout = workout
+        workout.exercises.append(workoutExercise)
+        context.insert(workoutExercise)
+        
+        // Add sets with progressive overload
+        let baseWeight = 60.0 + Double(i * 5)
+        for j in 1...4 {
+            let set = ExerciseSet(
+                setNumber: j,
+                weight: baseWeight + Double(j * 2),
+                reps: 12 - j
+            )
+            set.isCompleted = true
+            set.workoutExercise = workoutExercise
+            workoutExercise.sets.append(set)
+            context.insert(set)
+        }
+    }
+    
+    // Create personal records with realistic progression
+    let prExercises = [benchPress, squat, deadlift, shoulderPress]
+    let baseWeights = [100.0, 140.0, 180.0, 70.0]
+    
+    for (index, exercise) in prExercises.enumerated() {
+        // Create 2-3 PRs per exercise showing progression
+        for prIndex in 0..<3 {
+            let pr = PersonalRecord(
+                exercise: exercise,
+                weight: baseWeights[index] + Double(prIndex * 10),
+                reps: 5 - prIndex,
+                date: Calendar.current.date(byAdding: .day, value: -(prIndex * 15 + index * 5), to: Date())!,
+                recordType: prIndex == 0 ? .actual : .calculated
+            )
+            context.insert(pr)
+        }
+    }
+    
+    // Create 1RM history with clear progression for each exercise
+    for (exerciseIndex, exercise) in prExercises.enumerated() {
+        let startWeight = baseWeights[exerciseIndex] - 20.0
+        
+        // Create 8-10 data points showing progression over 3 months
+        for i in 0..<10 {
+            let daysAgo = 90 - (i * 9) // Spread over 90 days
+            let history = OneRepMaxHistory(
+                exercise: exercise,
+                oneRepMax: startWeight + Double(i * 3), // Progressive increase
+                date: Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!,
+                source: i % 3 == 0 ? .actualTest : .calculatedFromSet
+            )
+            history.confidence = i % 3 == 0 ? .high : (i % 3 == 1 ? .medium : .low)
+            context.insert(history)
+        }
+    }
+    
+    // Create user profile
+    let profile = UserProfile()
+    profile.name = "Preview User"
+    profile.workoutDaysPerWeek = 4
+    profile.experienceLevel = .intermediate
+    profile.weightUnit = .kg
+    context.insert(profile)
+    
+    try? context.save()
+    
+    return container
 }

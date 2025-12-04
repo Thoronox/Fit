@@ -17,7 +17,7 @@ class Workout {
     
     init(name: String, date: Date = Date()) {
         self.id = UUID()
-        self.name = name
+        self.name = name + " " + date.formatted_ddMMyy() 
         self.date = date
     }
     
@@ -403,6 +403,16 @@ enum FitnessGoal: String, CaseIterable, Codable {
 
 
 
+
+// MARK: - Date Extensions
+extension Date {
+    /// Format date as dd.mm.yy
+    func formatted_ddMMyy() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yy"
+        return formatter.string(from: self)
+    }
+}
 
 extension WorkoutExercise {
     

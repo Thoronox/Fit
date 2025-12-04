@@ -5,7 +5,7 @@ struct WorkoutTimerView: View {
 
     var body: some View {
         // Updates every 0.1s so timer is smooth; blinking derived from whole seconds.
-        TimelineView(.periodic(from: .now, by: 0.1)) { context in
+        TimelineView(.periodic(from: .now, by: 0.5)) { context in
             let elapsed = context.date.timeIntervalSince(startDate)
             let totalSeconds = Int(elapsed)
             let hours = totalSeconds / 3600
@@ -37,9 +37,9 @@ struct WorkoutTimerView: View {
         .onAppear {
             startDate = Date() // reset when view appears
         }
-//        .background(Color.black) // optional styling
     }
 }
 
-
-
+#Preview {
+    WorkoutTimerView()
+}
