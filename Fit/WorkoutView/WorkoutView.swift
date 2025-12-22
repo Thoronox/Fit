@@ -35,7 +35,7 @@ struct WorkoutView: View {
         .onChange(of: criteria.trainingTypeSelected) { generateWorkout(modelContext: modelContext) }
         .onChange(of: criteria.difficultySelected) { generateWorkout(modelContext: modelContext) }
         .onChange(of: criteria.workoutSplitSelected) { generateWorkout(modelContext: modelContext) }
-        .sheet(isPresented: $startWorkout) {
+        .fullScreenCover(isPresented: $startWorkout) {
             workoutSheet
         }
         .alert("Delete Exercise", isPresented: $showDeleteAlert) {
@@ -123,7 +123,12 @@ struct WorkoutView: View {
     @ViewBuilder
     private var workoutSheet: some View {
         if let workout = currentWorkout {
-            StartWorkoutView(workout: workout)
+            NavigationStack {
+                StartWorkoutView(workout: workout)
+                    .background(Color.black)
+                    .toolbarBackground(Color.black, for: .navigationBar)
+                    .toolbarBackground(.visible, for: .navigationBar)
+            }
         }
     }
     

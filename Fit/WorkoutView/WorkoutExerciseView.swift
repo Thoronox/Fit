@@ -1,9 +1,7 @@
 import SwiftUI
-import SwiftData
 
 struct WorkoutExerciseView: View {
     let workoutExercise: WorkoutExercise
-    @State private var showDetailView = false
     
     var completedSets: Int {
         workoutExercise.sets.filter { $0.isCompleted }.count
@@ -14,9 +12,7 @@ struct WorkoutExerciseView: View {
     }
 
     var body: some View {
-        Button(action: {
-            showDetailView = true
-        }) {
+        NavigationLink(destination: ExerciseDetailView(workoutExercise: workoutExercise)) {
             HStack {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .imageScale(.large)
@@ -57,32 +53,14 @@ struct WorkoutExerciseView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
-        .sheet(isPresented: $showDetailView) {
-            NavigationStack {
-                ExerciseDetailView(workoutExercise: workoutExercise)
-            }
-        }
-    }
-}
-
-struct WorkoutExerciseView_Preview: View {
-    @Query var workouts: [Workout]
-    
-    var body: some View {
-        Group {
-            if let workoutExercise = workouts.first?.exercises.first {
-                WorkoutExerciseView(workoutExercise: workoutExercise)
-                    .preferredColorScheme(.dark)
-                    .padding()
-            } else {
-                Text("No workout data available")
-                    .preferredColorScheme(.dark)
-            }
-        }
     }
 }
 
 #Preview {
-    WorkoutExerciseView_Preview()
-        .modelContainer(PreviewData.create().container)
+    let previewData = PreviewData.create()
+    let workoutExercise = previewData.workouts.first!.exercises.first!
+    
+    WorkoutExerciseView(workoutExercise: workoutExercise)
+        .preferredColorScheme(.dark)
+        .padding()
 }

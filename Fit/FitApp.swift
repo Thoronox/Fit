@@ -49,26 +49,40 @@ struct FitApp: App {
             TabView {
                 NavigationStack {
                     WorkoutView()
+                        .background(Color.black)
+                        .toolbarBackground(Color.black, for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
                 }
                 .tabItem { Label("Workout", systemImage: "figure.strengthtraining.traditional") }
                 
                 NavigationStack {
                     StatisticsView()
+                        .background(Color.black)
+                        .toolbarBackground(Color.black, for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
                 }
                 .tabItem { Label("Statistics", systemImage: "chart.xyaxis.line") }
                 
                 NavigationStack {
                     LogView()
+                        .background(Color.black)
+                        .toolbarBackground(Color.black, for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
                 }
                 .tabItem { Label("Log", systemImage: "list.clipboard") }
                 
                 NavigationStack {
                     DataManagementView()
+                        .background(Color.black)
+                        .toolbarBackground(Color.black, for: .navigationBar)
+                        .toolbarBackground(.visible, for: .navigationBar)
                 }
                 .tabItem { Label("Data", systemImage: "server.rack") }
             }
             .tint(AppTheme.tintColor)
             .preferredColorScheme(.dark)
+            .toolbarBackground(Color.black, for: .tabBar)
+            .toolbarBackground(.visible, for: .tabBar)
         }
         .modelContainer(sharedModelContainer)
     }

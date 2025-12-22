@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftData
 
 struct StartWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
@@ -13,72 +12,68 @@ struct StartWorkoutView: View {
     let workout: Workout
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                WorkoutTimerView()
+        VStack(spacing: 0) {
+            WorkoutTimerView()
 
-                List {
-                    ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                        ExerciseView(
-                            workoutExercise: workoutExercise,
-                            action: {
-                                  // Set the selected workout exercise to launch ExerciseExecutionView
-                                  selectedWorkoutExercise = workoutExercise
-                              },
-                            onExerciseReplaced: { newExercise in
-                                // Replace the exercise in your data model
-                                workoutExercise.exercise = newExercise                                
-                            },
-                            onExerciseDeleted: {
-                                // Store the exercise to delete and show alert
-                                exerciseToDelete = workoutExercise
-                                showDeleteAlert = true
-                            }
+            List {
+                ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
+                    ExerciseView(
+                        workoutExercise: workoutExercise,
+                        action: {
+                              // Set the selected workout exercise to launch ExerciseExecutionView
+                              selectedWorkoutExercise = workoutExercise
+                          },
+                        onExerciseReplaced: { newExercise in
+                            // Replace the exercise in your data model
+                            workoutExercise.exercise = newExercise
+                        },
+                        onExerciseDeleted: {
+                            // Store the exercise to delete and show alert
+                            exerciseToDelete = workoutExercise
+                            showDeleteAlert = true
+                        }
 
-                        )
-                        .listRowBackground(Color.black)
-                    }
-                }
-                .listStyle(.plain)
-
-                Text("Number of Exercises \(workout.exercises.count)")
-                Button("Finish Workout") {
-                    finishWorkout()
-                }
-                .buttonStyle(.borderedProminent)
-                .padding()
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .imageScale(.large)
-                            .foregroundColor(.primary)
-                    }
+                    )
+                    .listRowBackground(Color.black)
                 }
             }
-            .background(Color.black)
-            .alert("Delete Exercise", isPresented: $showDeleteAlert) {
-                Button("Cancel", role: .cancel) {
-                    exerciseToDelete = nil
-                }
-                Button("Delete", role: .destructive) {
-                    if let workoutExercise = exerciseToDelete {
-                        deleteExercise(workoutExercise, from: workout)
-                    }
-                    exerciseToDelete = nil
-                }
-            } message: {
-                Text("Are you sure you want to delete \(exerciseToDelete?.exercise?.name ?? "this exercise")? This action cannot be undone.")
-            }
+            .listStyle(.plain)
 
+            Text("Number of Exercises \(workout.exercises.count)")
+            Button("Finish Workout") {
+                finishWorkout()
+            }
+            .buttonStyle(.borderedProminent)
+            .padding()
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .imageScale(.large)
+                        .foregroundColor(.primary)
+                }
+            }
+        }
+        .background(Color.black)
+        .alert("Delete Exercise", isPresented: $showDeleteAlert) {
+            Button("Cancel", role: .cancel) {
+                exerciseToDelete = nil
+            }
+            Button("Delete", role: .destructive) {
+                if let workoutExercise = exerciseToDelete {
+                    deleteExercise(workoutExercise, from: workout)
+                }
+                exerciseToDelete = nil
+            }
+        } message: {
+            Text("Are you sure you want to delete \(exerciseToDelete?.exercise?.name ?? "this exercise")? This action cannot be undone.")
         }
         .sheet(item: $selectedWorkoutExercise) { workoutExercise in
             ExerciseExecutionView(workoutExercise: workoutExercise, readonly: false)
         }
-        
     }
     
     private func finishWorkout() {
@@ -134,19 +129,4 @@ struct StartWorkoutView: View {
         }
     }
 
-
-}
-
-#Preview {
-    let previewData = PreviewData.create()
-    
-    // Access the last workout (active workout) from preview data
-    if let workout = previewData.workouts.last {
-        StartWorkoutView(workout: workout)
-            .modelContainer(previewData.container)
-            .preferredColorScheme(.dark)
-    } else {
-        Text("No workout data available")
-            .modelContainer(previewData.container)
-    }
 }
