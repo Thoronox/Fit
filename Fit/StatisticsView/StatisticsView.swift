@@ -378,7 +378,9 @@ struct RecordTypeBadge: View {
 }
 
 #Preview {
+    let previewData = PreviewData.create()
+    
     StatisticsView()
-        .modelContainer(for: Workout.self, inMemory: true)
+        .modelContainer(previewData.container)
         .preferredColorScheme(.dark)
 }

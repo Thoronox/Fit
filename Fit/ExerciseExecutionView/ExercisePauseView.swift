@@ -78,3 +78,7 @@ struct ExercisePauseView: View {
             .font(.system(size: 28, weight: .bold, design: .monospaced))
     }
 }
+
+#Preview {
+    ExercisePauseView(restTime: 90)
+}

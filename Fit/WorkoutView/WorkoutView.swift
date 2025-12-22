@@ -227,7 +227,12 @@ extension Notification.Name {
     static let workoutFinished = Notification.Name("workoutFinished")
 }
 
-
-
-
-
+#Preview {
+    let previewData = PreviewData.create()
+    
+    NavigationStack {
+        WorkoutView()
+            .modelContainer(previewData.container)
+            .preferredColorScheme(.dark)
+    }
+}

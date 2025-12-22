@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct WorkoutExerciseView: View {
     let workoutExercise: WorkoutExercise
@@ -62,4 +63,26 @@ struct WorkoutExerciseView: View {
             }
         }
     }
+}
+
+struct WorkoutExerciseView_Preview: View {
+    @Query var workouts: [Workout]
+    
+    var body: some View {
+        Group {
+            if let workoutExercise = workouts.first?.exercises.first {
+                WorkoutExerciseView(workoutExercise: workoutExercise)
+                    .preferredColorScheme(.dark)
+                    .padding()
+            } else {
+                Text("No workout data available")
+                    .preferredColorScheme(.dark)
+            }
+        }
+    }
+}
+
+#Preview {
+    WorkoutExerciseView_Preview()
+        .modelContainer(PreviewData.create().container)
 }

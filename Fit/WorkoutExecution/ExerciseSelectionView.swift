@@ -252,3 +252,10 @@ struct CompoundBadge: View {
     }
 }
 
+#Preview {
+    @Previewable @State var selectedExercise: Exercise? = nil
+    
+    ExerciseSelectionView(selectedExercise: $selectedExercise)
+        .modelContainer(PreviewData.create().container)
+        .preferredColorScheme(.dark)
+}

@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct ExerciseDetailView: View {
-    @Environment(\.modelContext) private var modelContext
     let workoutExercise: WorkoutExercise
     
     var body: some View {
@@ -102,4 +101,24 @@ struct ExerciseDetailView: View {
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
     }
+}
+
+struct ExerciseDetailView_Preview: View {
+    @Query var workouts: [Workout]
+    
+    var body: some View {
+        NavigationStack {
+            if let workoutExercise = workouts.first?.exercises.first {
+                ExerciseDetailView(workoutExercise: workoutExercise)
+                    .preferredColorScheme(.dark)
+            } else {
+                Text("No workout data available")
+            }
+        }
+    }
+}
+
+#Preview {
+    ExerciseDetailView_Preview()
+        .modelContainer(PreviewData.create().container)
 }

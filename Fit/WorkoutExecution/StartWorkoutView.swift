@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct StartWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
@@ -133,5 +134,19 @@ struct StartWorkoutView: View {
         }
     }
 
+
 }
 
+#Preview {
+    let previewData = PreviewData.create()
+    
+    // Access the last workout (active workout) from preview data
+    if let workout = previewData.workouts.last {
+        StartWorkoutView(workout: workout)
+            .modelContainer(previewData.container)
+            .preferredColorScheme(.dark)
+    } else {
+        Text("No workout data available")
+            .modelContainer(previewData.container)
+    }
+}

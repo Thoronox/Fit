@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import Charts
 
 struct DualAxisChartView: View {
@@ -155,4 +156,23 @@ struct DualAxisChartView: View {
     private func getMinVolume() -> Double {
         return volumeData.map { $0.totalVolume }.min() ?? 1000.0
     }
+}
+
+struct ChartView_Preview: View {
+    @Query var oneRepMaxHistories: [OneRepMaxHistory]
+    
+    var body: some View {
+        let benchPressHistory = oneRepMaxHistories.filter {
+            $0.exercise?.name == "Barbell Bench Press"
+        }
+        
+        DualAxisChartView(oneRepMaxHistory: benchPressHistory)
+            .preferredColorScheme(.dark)
+            .padding()
+    }
+}
+
+#Preview {
+    ChartView_Preview()
+        .modelContainer(PreviewData.create().container)
 }

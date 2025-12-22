@@ -97,3 +97,11 @@ struct LogRowView: View {
         .padding(.vertical, 2)
     }
 }
+
+#Preview {
+    let previewData = PreviewData.create()
+    
+    LogView()
+        .modelContainer(previewData.container)
+        .preferredColorScheme(.dark)
+}

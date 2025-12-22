@@ -63,3 +63,9 @@ struct WorkoutCriteriaView: View {
     }
 }
 
+#Preview {
+    WorkoutCriteriaView()
+        .environmentObject(WorkoutCriteria())
+        .preferredColorScheme(.dark)
+}
+

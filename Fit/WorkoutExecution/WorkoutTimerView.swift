@@ -41,5 +41,7 @@ struct WorkoutTimerView: View {
     }
 }
 
-
-
+#Preview {
+    WorkoutTimerView()
+        .preferredColorScheme(.dark)
+}

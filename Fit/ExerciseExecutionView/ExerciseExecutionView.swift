@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct ExerciseExecutionView: View {
     @Environment(\.dismiss) private var dismiss
