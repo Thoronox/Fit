@@ -72,19 +72,8 @@ struct WorkoutView: View {
     private func workoutList(for workout: Workout) -> some View {
         List {
             ForEach(workout.exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                ExerciseView(
+                WorkoutExerciseView(
                     workoutExercise: workoutExercise,
-                    action: {
-                        selectedWorkoutExercise = workoutExercise
-                    },
-                    onExerciseReplaced: { newExercise in
-                        workoutExercise.exercise = newExercise                        
-                        workoutExercise.loadSetsFromLastPerformance(in: modelContext)
-                    },
-                    onExerciseDeleted: {
-                        exerciseToDelete = workoutExercise
-                        showDeleteAlert = true
-                    }
                 )
                 .listRowBackground(Color.black)
             }
@@ -172,6 +161,8 @@ struct WorkoutView: View {
     }
 
     private func generateWorkout(modelContext: ModelContext) {
+        currentWorkout = computeNewWorkout()
+/*
         if workoutGenerator == nil {
             workoutGenerator = GeminiWorkoutGeneratorService()
         }
@@ -196,6 +187,7 @@ struct WorkoutView: View {
                 showRetry = false
             }
         }
+ */
     }
     
     private func computeNewWorkout() -> Workout {

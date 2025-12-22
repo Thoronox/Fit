@@ -1,15 +1,9 @@
 import SwiftUI
 
-struct ExerciseView: View {
-    @State private var selectedExercise: Exercise?
-    @State private var replaceExercise = false
-
+struct WorkoutExerciseView: View {
     let workoutExercise: WorkoutExercise
-    let action: () -> Void
+    @State private var showDetailView = false
     
-    let onExerciseReplaced: ((Exercise) -> Void)?
-    let onExerciseDeleted: (() -> Void)? // Make sure this is not nil
-
     var completedSets: Int {
         workoutExercise.sets.filter { $0.isCompleted }.count
     }
@@ -19,7 +13,9 @@ struct ExerciseView: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            showDetailView = true
+        }) {
             HStack {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .imageScale(.large)
@@ -60,27 +56,9 @@ struct ExerciseView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
-        .swipeActions(edge: .trailing) {
-            Button {
-                replaceExercise = true
-            } label: {
-                Label("Replace", systemImage: "arrow.2.squarepath")
-            }
-            .tint(.blue)
-            
-            Button(role: .destructive) {
-                onExerciseDeleted?()
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
-        }
-        .sheet(isPresented: $replaceExercise) {
-            ExerciseSelectionView(selectedExercise: $selectedExercise)
-        }
-        .onChange(of: selectedExercise) { _, newExercise in
-            if let newExercise = newExercise {
-                onExerciseReplaced?(newExercise)
-                selectedExercise = nil
+        .sheet(isPresented: $showDetailView) {
+            NavigationStack {
+                ExerciseDetailView(workoutExercise: workoutExercise)
             }
         }
     }
