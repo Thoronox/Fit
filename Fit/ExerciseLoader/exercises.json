@@ -1,0 +1,193 @@
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Bench Press",
+    "instructions": "Lie flat on a bench with your feet firmly planted on the ground. Grip the barbell with hands slightly wider than shoulder-width apart. Lower the bar to your chest in a controlled manner, then press it back up to full arm extension.",
+    "primaryMuscleGroup": "Chest",
+    "secondaryMuscleGroups": ["Triceps", "Shoulders"],
+    "equipment": "Barbell",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "name": "Squat",
+    "instructions": "Stand with feet shoulder-width apart, toes slightly pointed out. Keep your chest up and core tight. Lower your body by pushing your hips back and bending your knees until your thighs are parallel to the floor. Drive through your heels to return to starting position.",
+    "primaryMuscleGroup": "Quadriceps",
+    "secondaryMuscleGroups": ["Glutes", "Hamstrings"],
+    "equipment": "Barbell",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "name": "Deadlift",
+    "instructions": "Stand with feet hip-width apart, barbell over mid-foot. Bend at hips and knees to grasp the bar. Keep your back straight, chest up, and shoulders back. Drive through your heels and hips to lift the bar, keeping it close to your body.",
+    "primaryMuscleGroup": "Back",
+    "secondaryMuscleGroups": ["Hamstrings", "Glutes"],
+    "equipment": "Barbell",
+    "exerciseType": "Powerlifting",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "name": "Pull-up",
+    "instructions": "Hang from a pull-up bar with arms fully extended and hands slightly wider than shoulder-width apart. Pull your body up until your chin is over the bar. Lower yourself back down with control to full arm extension.",
+    "primaryMuscleGroup": "Back",
+    "secondaryMuscleGroups": ["Biceps"],
+    "equipment": "Pull-up Bar",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440005",
+    "name": "Push-up",
+    "instructions": "Start in a plank position with hands slightly wider than shoulders. Keep your body in a straight line from head to heels. Lower your chest to the ground, then push back up to starting position.",
+    "primaryMuscleGroup": "Chest",
+    "secondaryMuscleGroups": ["Triceps", "Shoulders"],
+    "equipment": "Bodyweight",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440006",
+    "name": "Overhead Press",
+    "instructions": "Stand with feet shoulder-width apart, holding a barbell at shoulder height. Press the bar straight up overhead until arms are fully extended. Lower back to starting position with control.",
+    "primaryMuscleGroup": "Shoulders",
+    "secondaryMuscleGroups": ["Triceps"],
+    "equipment": "Barbell",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440007",
+    "name": "Barbell Row",
+    "instructions": "Stand with feet hip-width apart, holding a barbell with an overhand grip. Hinge at the hips and lean forward. Pull the bar to your lower chest/upper abdomen, squeezing your shoulder blades together. Lower with control.",
+    "primaryMuscleGroup": "Back",
+    "secondaryMuscleGroups": ["Biceps"],
+    "equipment": "Barbell",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440008",
+    "name": "Dip",
+    "instructions": "Support yourself on parallel bars with arms straight. Lower your body by bending your arms until your shoulders are below your elbows. Push back up to starting position.",
+    "primaryMuscleGroup": "Triceps",
+    "secondaryMuscleGroups": ["Chest", "Shoulders"],
+    "equipment": "Dip Station",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440009",
+    "name": "Bicep Curl",
+    "instructions": "Stand with feet hip-width apart, holding dumbbells at your sides. Keep your elbows close to your body and curl the weights up to your shoulders. Lower with control.",
+    "primaryMuscleGroup": "Biceps",
+    "secondaryMuscleGroups": [],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440010",
+    "name": "Plank",
+    "instructions": "Start in a push-up position but rest on your forearms instead of hands. Keep your body in a straight line from head to heels. Hold this position while breathing normally.",
+    "primaryMuscleGroup": "Abs",
+    "secondaryMuscleGroups": ["Shoulders"],
+    "equipment": "Bodyweight",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440011",
+    "name": "Running",
+    "instructions": "Maintain an upright posture with a slight forward lean. Land on the midfoot and push off with your toes. Keep a steady breathing pattern and maintain a comfortable pace.",
+    "primaryMuscleGroup": "Cardio",
+    "secondaryMuscleGroups": ["Quadriceps", "Hamstrings", "Calves"],
+    "equipment": "None",
+    "exerciseType": "Cardio",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440012",
+    "name": "Lunges",
+    "instructions": "Stand with feet hip-width apart. Step forward with one leg, lowering your hips until both knees are bent at 90 degrees. Push back to starting position and repeat with the other leg.",
+    "primaryMuscleGroup": "Quadriceps",
+    "secondaryMuscleGroups": ["Glutes", "Hamstrings"],
+    "equipment": "Bodyweight",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440013",
+    "name": "Dumbbell Bench Press",
+    "instructions": "Lie flat on a bench holding a dumbbell in each hand above your chest with arms extended. Lower the dumbbells to the sides of your chest, then press them back up until arms are straight.",
+    "primaryMuscleGroup": "Chest",
+    "secondaryMuscleGroups": ["Triceps", "Shoulders"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440014",
+    "name": "Dumbbell Skull Crusher",
+    "instructions": "Lie on a bench holding two dumbbells with arms extended above your chest. Bend your elbows to lower the dumbbells toward your forehead, then extend your arms back to the starting position.",
+    "primaryMuscleGroup": "Triceps",
+    "secondaryMuscleGroups": [],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440015",
+    "name": "Dumbbell Shoulder Press",
+    "instructions": "Sit or stand holding a dumbbell in each hand at shoulder height, palms facing forward. Press the weights upward until arms are fully extended, then lower back to starting position.",
+    "primaryMuscleGroup": "Shoulders",
+    "secondaryMuscleGroups": ["Triceps"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440016",
+    "name": "Dumbbell Shoulder Raise",
+    "instructions": "Stand with a dumbbell in each hand at your sides. Keeping your arms straight with a slight bend in the elbows, lift the weights out to the sides until they reach shoulder height, then lower with control.",
+    "primaryMuscleGroup": "Shoulders",
+    "secondaryMuscleGroups": [],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440017",
+    "name": "Dumbbell Rear Delt Raise",
+    "instructions": "Bend forward at the hips with a dumbbell in each hand, palms facing each other. Lift the dumbbells out to the sides until they are level with your shoulders, then lower them slowly.",
+    "primaryMuscleGroup": "Rear Deltoids",
+    "secondaryMuscleGroups": ["Trapezius"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440018",
+    "name": "Dumbbell Fly",
+    "instructions": "Lie flat on a bench holding a dumbbell in each hand above your chest, palms facing each other. With a slight bend in your elbows, lower the dumbbells out to the sides until you feel a stretch in your chest, then bring them back together.",
+    "primaryMuscleGroup": "Chest",
+    "secondaryMuscleGroups": ["Shoulders"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440019",
+    "name": "Dumbbell Kickbacks",
+    "instructions": "Hold a dumbbell in each hand with knees slightly bent and torso leaning forward. Keep your upper arms close to your torso and extend your forearms back until your arms are straight, then return to start.",
+    "primaryMuscleGroup": "Triceps",
+    "secondaryMuscleGroups": [],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  }
+]
