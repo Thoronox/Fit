@@ -8,6 +8,7 @@ struct StartWorkoutView: View {
     // Move delete alert state to parent view
     @State private var exerciseToDelete: WorkoutExercise?
     @State private var showDeleteAlert = false
+    @State private var showLeaveAlert = false
 
     let workout: Workout
     
@@ -49,7 +50,7 @@ struct StartWorkoutView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
-                    dismiss()
+                    showLeaveAlert = true
                 } label: {
                     Image(systemName: "xmark")
                         .imageScale(.large)
@@ -70,6 +71,15 @@ struct StartWorkoutView: View {
             }
         } message: {
             Text("Are you sure you want to delete \(exerciseToDelete?.exercise?.name ?? "this exercise")? This action cannot be undone.")
+        }
+        .alert("Leave Workout", isPresented: $showLeaveAlert) {
+            Button("Cancel", role: .cancel) {
+            }
+            Button("Leave", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("Are you sure you want to leave the workout without saving your progress?")
         }
         .sheet(item: $selectedWorkoutExercise) { workoutExercise in
             ExerciseExecutionView(workoutExercise: workoutExercise, readonly: false)
