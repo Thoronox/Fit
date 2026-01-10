@@ -15,13 +15,11 @@ struct DataManagementView: View {
     @State private var exportFileURL: URL?
     
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            headerSection
+            
             ScrollView {
                 VStack(spacing: 20) {
-                    HeaderSection()
-                    
-                    Divider()
-                    
                     DataManagementSection(
                         title: "Export Data",
                         icon: "arrow.up.doc",
@@ -56,8 +54,8 @@ struct DataManagementView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Data Management")
         }
+        .toolbar(.hidden, for: .navigationBar)
         .modifier(AlertsModifier(
             showExportSuccess: $showExportSuccess,
             showImportSuccess: $showImportSuccess,
@@ -79,6 +77,17 @@ struct DataManagementView: View {
                     try? FileManager.default.removeItem(at: url)
                 }
         }
+    }
+
+    @ViewBuilder
+    private var headerSection: some View {
+        HStack {
+            Text("Data Management")
+                .font(.largeTitle)
+                .bold()
+            Spacer()
+        }
+        .padding(.horizontal)
     }
     
     // MARK: - File Import Handler
@@ -199,22 +208,6 @@ extension URL: @retroactive Identifiable {
 }
 
 // MARK: - View Components
-
-/// Header section with title and description
-struct HeaderSection: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Data Management")
-                .font(.title2)
-                .fontWeight(.bold)
-            Text("Export, import, or delete your workout data")
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 10)
-    }
-}
 
 /// Reusable section for data management actions
 struct DataManagementSection: View {

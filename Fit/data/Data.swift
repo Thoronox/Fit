@@ -11,14 +11,24 @@ class Workout {
     var duration: TimeInterval? // in seconds
     var notes: String?
     
+    // New properties for predefined workouts
+    var isPredefined: Bool // true if this is a predefined/template workout
+    var workoutDescription: String? // Description for predefined workouts
+    var difficulty: WorkoutDifficulty? // Optional difficulty level
+    var tags: [String] = [] // Optional tags for categorization
+    
     // Relationships
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workout)
     var exercises: [WorkoutExercise] = []
     
-    init(name: String, date: Date = Date()) {
+    init(name: String, date: Date = Date(), isPredefined: Bool = false, workoutDescription: String? = nil, difficulty: WorkoutDifficulty? = nil, tags: [String] = []) {
         self.id = UUID()
         self.name = name
         self.date = date
+        self.isPredefined = isPredefined
+        self.workoutDescription = workoutDescription
+        self.difficulty = difficulty
+        self.tags = tags
     }
     
     // Computed properties
@@ -199,6 +209,13 @@ enum ExerciseType: String, CaseIterable, Codable {
     case plyometric = "Plyometric"
     case powerlifting = "Powerlifting"
     case olympic = "Olympic Lifting"
+}
+
+// Enum for workout difficulty
+enum WorkoutDifficulty: String, CaseIterable, Codable {
+    case beginner = "Beginner"
+    case intermediate = "Intermediate"
+    case advanced = "Advanced"
 }
 
 // MARK: - Progress Tracking

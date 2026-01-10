@@ -119,7 +119,6 @@
     "exerciseType": "Strength",
     "isCompound": true
   },
-
   {
     "id": "550e8400-e29b-41d4-a716-446655440013",
     "name": "Dumbbell Bench Press",
@@ -187,6 +186,46 @@
     "primaryMuscleGroup": "Triceps",
     "secondaryMuscleGroups": [],
     "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440020",
+    "name": "Incline Dumbbell Bench Press",
+    "instructions": "Set a bench to a 30-45 degree incline. Lie back holding a dumbbell in each hand at shoulder level. Press the dumbbells up until your arms are fully extended, then lower them back down with control to the starting position.",
+    "primaryMuscleGroup": "Chest",
+    "secondaryMuscleGroups": ["Shoulders", "Triceps"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440021",
+    "name": "Goblet Squat",
+    "instructions": "Hold a dumbbell vertically close to your chest with both hands cupping the top weight. Stand with feet shoulder-width apart. Lower into a squat by pushing your hips back and bending your knees, keeping your chest up. Drive through your heels to return to standing.",
+    "primaryMuscleGroup": "Quadriceps",
+    "secondaryMuscleGroups": ["Glutes", "Hamstrings"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440022",
+    "name": "Dumbbell Romanian Deadlift",
+    "instructions": "Stand with feet hip-width apart, holding a dumbbell in each hand in front of your thighs. Keep a slight bend in your knees and hinge at the hips, lowering the dumbbells along your legs while keeping your back straight. Feel the stretch in your hamstrings, then drive your hips forward to return to standing.",
+    "primaryMuscleGroup": "Hamstrings",
+    "secondaryMuscleGroups": ["Glutes", "Back"],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": true
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440023",
+    "name": "Dead Bug",
+    "instructions": "Lie on your back with arms extended straight up toward the ceiling and legs raised with knees bent at 90 degrees. Slowly lower your right arm overhead while extending your left leg straight, hovering just above the floor. Return to start and repeat on the opposite side. Keep your lower back pressed to the floor throughout.",
+    "primaryMuscleGroup": "Abs",
+    "secondaryMuscleGroups": ["Hip Flexors"],
+    "equipment": "Bodyweight",
     "exerciseType": "Strength",
     "isCompound": false
   }

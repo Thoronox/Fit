@@ -22,14 +22,17 @@ struct WorkoutView: View {
     @State private var showDeleteAlert = false
     @State private var showRetry = false
     @State private var workoutGenerator: GeminiWorkoutGeneratorService?
+    @State private var showPredefinedSheet = false
+    @Query(filter: #Predicate<Workout> { $0.isPredefined == true }) private var predefinedWorkouts: [Workout]
 
     var body: some View {
         VStack {
+            headerSection
             criteriaSection
             workoutContentSection
             startWorkoutButton
         }
-        .navigationTitle("Workout")
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear(perform: handleOnAppear)
         .onChange(of: criteria.durationSelected) { generateWorkout(modelContext: modelContext) }
         .onChange(of: criteria.trainingTypeSelected) { generateWorkout(modelContext: modelContext) }
@@ -46,12 +49,45 @@ struct WorkoutView: View {
         .onReceive(NotificationCenter.default.publisher(for: .workoutFinished)) { _ in
             currentWorkout = nil
         }
+        .onReceive(NotificationCenter.default.publisher(for: .workoutCreated)) { notification in
+            if let userInfo = notification.userInfo,
+               let workout = userInfo["workout"] as? Workout {
+                currentWorkout = workout
+            }
+        }
         .sheet(item: $selectedWorkoutExercise) { workoutExercise in
             ExerciseExecutionView(workoutExercise: workoutExercise, readonly: true)
+        }
+        .sheet(isPresented: $showPredefinedSheet) {
+            PredefinedWorkoutListView(
+                workouts: predefinedWorkouts,
+                onSelect: { selected in
+                    if let selected = selected {
+                        currentWorkout = selected
+                    }
+                    showPredefinedSheet = false
+                }
+            )
         }
     }
     
     // MARK: - View Components
+    
+    @ViewBuilder
+    private var headerSection: some View {
+        HStack {
+            Text("Workout")
+                .font(.largeTitle)
+                .bold()
+            Spacer()
+            Button(action: { showPredefinedSheet = true }) {
+                Image(systemName: "plus")
+            }
+            .font(.title2)
+            .accessibilityLabel("Show Predefined Workouts")
+        }
+        .padding(.horizontal)
+    }
     
     @ViewBuilder
     private var criteriaSection: some View {
@@ -230,6 +266,35 @@ struct WorkoutView: View {
 
 extension Notification.Name {
     static let workoutFinished = Notification.Name("workoutFinished")
+    static let workoutCreated = Notification.Name("workoutCreated")
+    static let switchToWorkoutTab = Notification.Name("switchToWorkoutTab")
+}
+
+
+struct PredefinedWorkoutListView: View {
+    let workouts: [Workout]
+    let onSelect: (Workout?) -> Void
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            List(workouts) { workout in
+                Button(action: { onSelect(workout) }) {
+                    VStack(alignment: .leading) {
+                        Text(workout.name)
+                        if let desc = workout.workoutDescription {
+                            Text(desc).font(.caption).foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Predefined Workouts")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onSelect(nil) }
+                }
+            }
+        }
+    }
 }
 
 #Preview {

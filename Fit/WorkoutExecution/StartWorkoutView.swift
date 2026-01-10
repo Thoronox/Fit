@@ -9,11 +9,28 @@ struct StartWorkoutView: View {
     @State private var exerciseToDelete: WorkoutExercise?
     @State private var showDeleteAlert = false
     @State private var showLeaveAlert = false
+    @State private var showAddExercise = false
+    @State private var selectedExercise: Exercise?
 
     let workout: Workout
+    @State private var workoutName: String = ""
+    @FocusState private var isNameFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
+            // Editable Workout Name
+            TextField("Workout Name", text: $workoutName)
+                .font(.title2)
+                .fontWeight(.bold)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .focused($isNameFocused)
+                .submitLabel(.done)
+                .onSubmit {
+                    isNameFocused = false
+                }
+            
             WorkoutTimerView()
 
             List {
@@ -37,6 +54,19 @@ struct StartWorkoutView: View {
                     )
                     .listRowBackground(Color.black)
                 }
+                
+                // Add Exercise Button
+                Button(action: {
+                    showAddExercise = true
+                }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.red)
+                        Text("Add Exercise")
+                            .foregroundColor(.red)
+                    }
+                }
+                .listRowBackground(Color.black)
             }
             .listStyle(.plain)
 
@@ -59,6 +89,9 @@ struct StartWorkoutView: View {
             }
         }
         .background(Color.black)
+        .onAppear {
+            workoutName = workout.name
+        }
         .alert("Delete Exercise", isPresented: $showDeleteAlert) {
             Button("Cancel", role: .cancel) {
                 exerciseToDelete = nil
@@ -84,9 +117,32 @@ struct StartWorkoutView: View {
         .sheet(item: $selectedWorkoutExercise) { workoutExercise in
             ExerciseExecutionView(workoutExercise: workoutExercise, readonly: false)
         }
+        .sheet(isPresented: $showAddExercise) {
+            ExerciseSelectionView(selectedExercise: $selectedExercise)
+        }
+        .onChange(of: selectedExercise) { _, newExercise in
+            if let newExercise = newExercise {
+                addExercise(newExercise, to: workout)
+                selectedExercise = nil
+            }
+        }
+    }
+    
+    private func addExercise(_ exercise: Exercise, to workout: Workout) {
+        withAnimation {
+            // Create new WorkoutExercise
+            let newWorkoutExercise = WorkoutExercise(
+                exercise: exercise,
+                order: workout.exercises.count
+            )
+            
+            // Add to workout
+            workout.exercises.append(newWorkoutExercise)
+        }
     }
     
     private func finishWorkout() {
+        workout.name = workoutName // Save the edited name
         workout.duration = Date().timeIntervalSince(workout.date)
         cleanUpWorkout(workout: workout)
         modelContext.insert(workout)

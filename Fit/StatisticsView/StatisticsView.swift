@@ -12,38 +12,49 @@ struct StatisticsView: View {
     @State private var selectedTab = 0
     
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Tab bar at the top
-                Picker("Statistics Tab", selection: $selectedTab) {
-                    Text("1RM Progress").tag(0)
-                    Text("Records").tag(1)
-                    Text("Overview").tag(2)
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                
-                // Content based on selected tab
-                if selectedTab == 0 {
-                    OneRepMaxStatisticsTab(
-                        exercises: exercises,
-                        oneRepMaxHistories: oneRepMaxHistories,
-                        modelContext: modelContext
-                    )
-                } else if selectedTab == 1 {
-                    PersonalRecordsTab(personalRecords: personalRecords)
-                } else {
-                    DataOverviewTab(
-                        workouts: workouts,
-                        exercises: exercises,
-                        personalRecords: personalRecords,
-                        oneRepMaxHistories: oneRepMaxHistories,
-                        userProfiles: userProfiles
-                    )
-                }
+        VStack(spacing: 0) {
+            headerSection
+            
+            // Tab bar at the top
+            Picker("Statistics Tab", selection: $selectedTab) {
+                Text("1RM Progress").tag(0)
+                Text("Records").tag(1)
+                Text("Overview").tag(2)
             }
-            .navigationTitle("Statistics")
+            .pickerStyle(.segmented)
+            .padding()
+            
+            // Content based on selected tab
+            if selectedTab == 0 {
+                OneRepMaxStatisticsTab(
+                    exercises: exercises,
+                    oneRepMaxHistories: oneRepMaxHistories,
+                    modelContext: modelContext
+                )
+            } else if selectedTab == 1 {
+                PersonalRecordsTab(personalRecords: personalRecords)
+            } else {
+                DataOverviewTab(
+                    workouts: workouts,
+                    exercises: exercises,
+                    personalRecords: personalRecords,
+                    oneRepMaxHistories: oneRepMaxHistories,
+                    userProfiles: userProfiles
+                )
+            }
         }
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    @ViewBuilder
+    private var headerSection: some View {
+        HStack {
+            Text("Statistics")
+                .font(.largeTitle)
+                .bold()
+            Spacer()
+        }
+        .padding(.horizontal)
     }
 }
 

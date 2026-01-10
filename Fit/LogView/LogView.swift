@@ -18,7 +18,7 @@ struct LogView: View {
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Color.appPrimary)
                 }
-                .buttonStyle(.plain) // or .bordered, etc.
+                .buttonStyle(.plain)
 
                 Button(action: {
                     print("Tapped")
@@ -27,7 +27,7 @@ struct LogView: View {
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(Color.appPrimary)
                 }
-                .buttonStyle(.plain) // or .bordered, etc.
+                .buttonStyle(.plain)
             }
             .padding()
             
@@ -38,14 +38,79 @@ struct LogView: View {
                 List {
                     ForEach(workouts) { workout in
                         LogRowView(workout: workout)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    if let index = workouts.firstIndex(where: { $0.id == workout.id }) {
+                                        deleteWorkouts(offsets: IndexSet(integer: index))
+                                    }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                Button {
+                                    reuseWorkout(workout)
+                                } label: {
+                                    Label("Start Again", systemImage: "arrow.clockwise")
+                                }
+                                .tint(.red)
+                            }
                     }
-                    .onDelete(perform: deleteWorkouts)
                 }
                 .listStyle(PlainListStyle())
-
+            }
+        }
+    }
+    
+    private func reuseWorkout(_ completedWorkout: Workout) {
+        // Create a new workout based on the completed one
+        let newWorkout = Workout(
+            name: completedWorkout.name,
+            isPredefined: false,
+            workoutDescription: completedWorkout.workoutDescription,
+            difficulty: completedWorkout.difficulty,
+            tags: completedWorkout.tags
+        )
+        
+        // Copy exercises and sets structure (but not completion status)
+        for (index, completedExercise) in completedWorkout.exercises.enumerated() {
+            guard let exercise = completedExercise.exercise else { continue }
+            
+            let newWorkoutExercise = WorkoutExercise(
+                exercise: exercise,
+                order: index
+            )
+            
+            // Copy the sets structure from the completed workout
+            for completedSet in completedExercise.sets {
+                let newSet = ExerciseSet(
+                    setNumber: completedSet.setNumber,
+                    weight: completedSet.weight,
+                    reps: completedSet.reps
+                )
+                // Don't mark as completed - user needs to complete them again
+                newSet.isCompleted = false
+                newWorkoutExercise.sets.append(newSet)
             }
             
+            newWorkout.exercises.append(newWorkoutExercise)
         }
+        
+        // DON'T insert into model context yet - it will be inserted when the workout is finished
+        // The workout will only be saved to the database when finishWorkout() is called in StartWorkoutView
+        
+        // Post notification so WorkoutView can pick it up
+        NotificationCenter.default.post(
+            name: .workoutCreated,
+            object: nil,
+            userInfo: ["workout": newWorkout]
+        )
+        
+        // Switch to Workout tab
+        NotificationCenter.default.post(
+            name: .switchToWorkoutTab,
+            object: nil
+        )
     }
     
     private func deleteWorkouts(offsets: IndexSet) {
@@ -56,7 +121,6 @@ struct LogView: View {
                 modelContext.delete(workoutToDelete)
             }
             
-            // CRITICAL: Save the changes to persist the deletion
             do {
                 try modelContext.save()
                 print("✅ Workout deletion saved successfully")
@@ -65,9 +129,7 @@ struct LogView: View {
             }
         }
     }
-
 }
-
 
 struct LogRowView: View {
     let workout: Workout
