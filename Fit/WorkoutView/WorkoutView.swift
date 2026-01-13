@@ -21,9 +21,14 @@ struct WorkoutView: View {
     @State private var exerciseToDelete: WorkoutExercise?
     @State private var showDeleteAlert = false
     @State private var showRetry = false
-    @State private var workoutGenerator: GeminiWorkoutGeneratorService?
+    @State private var showTokenConfiguration = false
+    @State private var workoutGenerator: AIWorkoutGeneratorService?
     @State private var showPredefinedSheet = false
     @Query(filter: #Predicate<Workout> { $0.isPredefined == true }) private var predefinedWorkouts: [Workout]
+    
+    // Get the selected provider
+    @AppStorage("selectedAIProvider") var selectedProvider: AIProvider = .chatGPT
+    @AppStorage("selectedChatGPTModel") var selectedChatGPTModel: ChatGPTModel = .gpt5Nano
 
     var body: some View {
         VStack {
@@ -120,8 +125,16 @@ struct WorkoutView: View {
     @ViewBuilder
     private var loadingOrErrorSection: some View {
         if showRetry == false {
-            ProgressView("Loading new workout...")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if showTokenConfiguration == true {
+                VStack {
+                    Spacer()
+                    Text("You need to configure the AI provider and the API token in the Settings first.")
+                    Spacer()
+                }
+            } else {
+                ProgressView("Loading new workout...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         } else {
             VStack {
                 Spacer()
@@ -190,8 +203,28 @@ struct WorkoutView: View {
     // MARK: - Helper Methods
     
     private func handleOnAppear() {
+        let token = KeychainHelper.load(key: selectedProvider == .chatGPT ? "chatGPTAPIToken" : "geminiAPIToken")
+
+        print (selectedChatGPTModel)
+        
+
+        if token == nil {
+            currentWorkout = nil
+            showTokenConfiguration = true
+            return
+        } else {
+            showTokenConfiguration = false
+        }
+        
+        // Unwrap token safely
+        guard let unwrappedToken = token else { return }
+        
         if workoutGenerator == nil {
-            workoutGenerator = GeminiWorkoutGeneratorService()
+            if selectedProvider == .chatGPT {
+                workoutGenerator = ChatGPTWorkoutGeneratorService(apiKey: unwrappedToken, model: selectedChatGPTModel.id)
+            } else {
+                workoutGenerator = GeminiWorkoutGeneratorService(apiKey: unwrappedToken)
+            }
         }
         
         if currentWorkout == nil {
@@ -200,12 +233,19 @@ struct WorkoutView: View {
             }
         }
     }
-
+    
     private func generateWorkout(modelContext: ModelContext) {
-        currentWorkout = computeNewWorkout()
-/*
+        //currentWorkout = computeNewWorkout()
+        let token = KeychainHelper.load(key: selectedProvider == .chatGPT ? "chatGPTAPIToken" : "geminiAPIToken")
+
+        // Ensure we have a token
+        guard let unwrappedToken = token else {
+            showTokenConfiguration = true
+            return
+        }
+
         if workoutGenerator == nil {
-            workoutGenerator = GeminiWorkoutGeneratorService()
+            workoutGenerator = GeminiWorkoutGeneratorService(apiKey: unwrappedToken)
         }
         
         guard let generator = workoutGenerator else { return }
@@ -228,7 +268,6 @@ struct WorkoutView: View {
                 showRetry = false
             }
         }
- */
     }
     
     private func computeNewWorkout() -> Workout {

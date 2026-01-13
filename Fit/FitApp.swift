@@ -97,12 +97,12 @@ struct FitApp: App {
                 .tag(2)
 
                 NavigationStack {
-                    DataManagementView()
+                    SettingsView()
                         .background(Color.black)
                         .toolbarBackground(Color.black, for: .navigationBar)
                         .toolbarBackground(.visible, for: .navigationBar)
                 }
-                .tabItem { Label("Data", systemImage: "server.rack") }
+                .tabItem { Label("Settings", systemImage: "server.rack") }
                 .tag(3)
             }
             .tint(AppTheme.tintColor)

@@ -73,16 +73,14 @@ struct ExerciseSelectionView: View {
         exercises.filter { exercise in
             let matchesSearch = searchText.isEmpty ||
                 exercise.name.localizedCaseInsensitiveContains(searchText)
-            
             let matchesMuscleGroup = selectedMuscleGroup == nil ||
                 exercise.primaryMuscleGroup == selectedMuscleGroup ||
                 exercise.secondaryMuscleGroups.contains(selectedMuscleGroup!)
-            
             let matchesExerciseType = selectedExerciseType == nil ||
                 exercise.exerciseType == selectedExerciseType
-            
             return matchesSearch && matchesMuscleGroup && matchesExerciseType
         }
+        .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 }
 

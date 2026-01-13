@@ -3,8 +3,12 @@ import SwiftData
 import os.log
 import UniformTypeIdentifiers
 
-struct DataManagementView: View {
+struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("selectedAIProvider") private var selectedProvider: AIProvider = .chatGPT
+    @AppStorage("selectedChatGPTModel") private var selectedChatGPTModel: ChatGPTModel = .gpt5Nano
+    @State private var chatGPTToken: String = ""
+    @State private var geminiToken: String = ""
     @State private var showExportSuccess = false
     @State private var showImportSuccess = false
     @State private var showDeleteConfirmation = false
@@ -13,13 +17,42 @@ struct DataManagementView: View {
     @State private var errorMessage = ""
     @State private var exportMessage = ""
     @State private var exportFileURL: URL?
+    @State private var showChatGPTToken = false
+    @State private var showGeminiToken = false
     
     var body: some View {
         VStack(spacing: 0) {
             headerSection
             
+            HStack {
+                Text("Holger F")
+
+                Spacer()
+                Button(action: {
+                    print("Tapped")
+                }) {
+                    Image(systemName: "timer")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.appPrimary)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: {
+                    print("Tapped")
+                }) {
+                    Image(systemName: "gearshape")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Color.appPrimary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            
             ScrollView {
                 VStack(spacing: 20) {
+                    // AI Provider Configuration Section
+                    aiConfigurationSection
+                    
                     DataManagementSection(
                         title: "Export Data",
                         icon: "arrow.up.doc",
@@ -77,17 +110,157 @@ struct DataManagementView: View {
                     try? FileManager.default.removeItem(at: url)
                 }
         }
+        .onAppear {
+            loadAPITokens()
+        }
     }
 
     @ViewBuilder
     private var headerSection: some View {
         HStack {
-            Text("Data Management")
+            Text("Settings")
                 .font(.largeTitle)
                 .bold()
             Spacer()
         }
         .padding(.horizontal)
+    }
+    
+    // MARK: - AI Configuration Section
+    @ViewBuilder
+    private var aiConfigurationSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("AI Workout Generator", systemImage: "brain.head.profile")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Text("Choose your preferred AI provider for generating personalized workouts")
+                .font(.caption)
+                .foregroundColor(.gray)
+            
+            // Provider Selection
+            Picker("AI Provider", selection: $selectedProvider) {
+                ForEach(AIProvider.allCases) { provider in
+                    Label(provider.rawValue, systemImage: provider.icon)
+                        .tag(provider)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, 4)
+            
+            // ChatGPT Model Selection (only visible when ChatGPT is selected)
+            if selectedProvider == .chatGPT {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("ChatGPT Model", systemImage: "cpu")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                    
+                    Picker("Model", selection: $selectedChatGPTModel) {
+                        ForEach(ChatGPTModel.allCases) { model in
+                            Text(model.displayName).tag(model)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(.red)
+                }
+                
+                // ChatGPT Token Configuration
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("ChatGPT API Key", systemImage: "key.fill")
+                        .font(.subheadline)
+                        .foregroundColor(selectedProvider == .chatGPT ? .white : .gray)
+                    
+                    HStack {
+                        if showChatGPTToken {
+                            TextField("sk-proj-...", text: $chatGPTToken)
+                                .textFieldStyle(.roundedBorder)
+                                .autocapitalization(.none)
+                                .autocorrectionDisabled()
+                        } else {
+                            SecureField("sk-proj-...", text: $chatGPTToken)
+                                .textFieldStyle(.roundedBorder)
+                                .autocapitalization(.none)
+                                .autocorrectionDisabled()
+                        }
+                        
+                        Button(action: { showChatGPTToken.toggle() }) {
+                            Image(systemName: showChatGPTToken ? "eye.slash.fill" : "eye.fill")
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .disabled(selectedProvider != .chatGPT)
+                    .opacity(selectedProvider == .chatGPT ? 1.0 : 0.6)
+                }
+            } else {
+                // Gemini Token Configuration
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Gemini API Key", systemImage: "key.fill")
+                        .font(.subheadline)
+                        .foregroundColor(selectedProvider == .gemini ? .white : .gray)
+                    
+                    HStack {
+                        if showGeminiToken {
+                            TextField("AIza...", text: $geminiToken)
+                                .textFieldStyle(.roundedBorder)
+                                .autocapitalization(.none)
+                                .autocorrectionDisabled()
+                        } else {
+                            SecureField("AIza...", text: $geminiToken)
+                                .textFieldStyle(.roundedBorder)
+                                .autocapitalization(.none)
+                                .autocorrectionDisabled()
+                        }
+                        
+                        Button(action: { showGeminiToken.toggle() }) {
+                            Image(systemName: showGeminiToken ? "eye.slash.fill" : "eye.fill")
+                                .foregroundColor(.gray)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .disabled(selectedProvider != .gemini)
+                    .opacity(selectedProvider == .gemini ? 1.0 : 0.6)
+                }
+
+            }
+            
+            
+            
+            // Save Button
+            Button(action: saveAPITokens) {
+                Label("Save API Keys", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+        }
+        .padding()
+        .background(Color(.systemGray6).opacity(0.5))
+        .cornerRadius(12)
+        .onChange(of: chatGPTToken) { _, _ in
+            // Auto-save when token changes
+            saveAPITokens()
+        }
+        .onChange(of: geminiToken) { _, _ in
+            // Auto-save when token changes
+            saveAPITokens()
+        }
+    }
+    
+    // MARK: - API Token Management
+    private func loadAPITokens() {
+        chatGPTToken = KeychainHelper.load(key: "chatGPTAPIToken") ?? ""
+        geminiToken = KeychainHelper.load(key: "geminiAPIToken") ?? ""
+    }
+    
+    private func saveAPITokens() {
+        if !chatGPTToken.isEmpty {
+            KeychainHelper.save(key: "chatGPTAPIToken", value: chatGPTToken)
+        }
+        if !geminiToken.isEmpty {
+            KeychainHelper.save(key: "geminiAPIToken", value: geminiToken)
+        }
+        AppLogger.info(AppLogger.data, "API tokens saved successfully")
     }
     
     // MARK: - File Import Handler
@@ -132,15 +305,11 @@ struct DataManagementView: View {
     private func handleImportedFile(_ fileURL: URL) {
         AppLogger.info(AppLogger.data, "Starting import from: \(fileURL.lastPathComponent)")
         
-        // Capture the container on the main actor
         let container = modelContext.container
         
-        // Perform import on background thread
         Task.detached {
             do {
-                // Create a new model context for background import
                 let context = ModelContext(container)
-                
                 try DataImportService.importData(from: fileURL, into: context)
                 
                 await MainActor.run {
@@ -172,6 +341,84 @@ struct DataManagementView: View {
             errorMessage = "Failed to delete data: \(error.localizedDescription)"
             showError = true
         }
+    }
+}
+
+// MARK: - AI Provider Enum
+enum AIProvider: String, CaseIterable, Identifiable {
+    case chatGPT = "ChatGPT"
+    case gemini = "Gemini"
+    
+    var id: String { rawValue }
+    
+    var icon: String {
+        switch self {
+        case .chatGPT: return "bubble.left.and.bubble.right.fill"
+        case .gemini: return "sparkles"
+        }
+    }
+}
+
+// MARK: - ChatGPT Model Enum
+enum ChatGPTModel: String, CaseIterable, Identifiable {
+    case gpt51 = "gpt-5.1"
+    case gpt5 = "gpt-5"
+    case gpt5Mini = "gpt-5-mini"
+    case gpt5Nano = "gpt-5-nano"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .gpt51: return "GPT-5.1"
+        case .gpt5: return "GPT-5"
+        case .gpt5Mini: return "GPT-5 Mini"
+        case .gpt5Nano: return "GPT-5 Nano"
+        }
+    }
+}
+
+// MARK: - Keychain Helper
+struct KeychainHelper {
+    static func save(key: String, value: String) {
+        let data = Data(value.utf8)
+        
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecValueData as String: data
+        ]
+        
+        SecItemDelete(query as CFDictionary)
+        SecItemAdd(query as CFDictionary, nil)
+    }
+    
+    static func load(key: String) -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true
+        ]
+        
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let string = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        
+        return string
+    }
+    
+    static func delete(key: String) {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key
+        ]
+        
+        SecItemDelete(query as CFDictionary)
     }
 }
 
@@ -209,7 +456,6 @@ extension URL: @retroactive Identifiable {
 
 // MARK: - View Components
 
-/// Reusable section for data management actions
 struct DataManagementSection: View {
     let title: String
     let icon: String
@@ -242,7 +488,6 @@ struct DataManagementSection: View {
     }
 }
 
-/// View modifier to handle all alerts
 struct AlertsModifier: ViewModifier {
     @Binding var showExportSuccess: Bool
     @Binding var showImportSuccess: Bool
@@ -278,7 +523,6 @@ struct AlertsModifier: ViewModifier {
     }
 }
 
-// MARK: - ShareSheet
 struct ShareSheet: UIViewControllerRepresentable {
     let activityItems: [Any]
     
@@ -290,7 +534,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 }
 
 #Preview {
-    DataManagementView()
+    SettingsView()
         .modelContainer(for: Workout.self, inMemory: true)
         .preferredColorScheme(.dark)
 }

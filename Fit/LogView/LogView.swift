@@ -3,37 +3,22 @@ import SwiftData
 
 struct LogView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Workout.date, order: .reverse) private var workouts: [Workout]
-
+    @Query(
+        filter: #Predicate<Workout> { workout in
+            workout.isPredefined == false
+        },
+        sort: \Workout.date,
+        order: .reverse
+    )
+    private var workouts: [Workout]
+    
     var body: some View {
-        VStack {
-            HStack {
-                Text("Holger F")
-
-                Spacer()
-                Button(action: {
-                    print("Tapped")
-                }) {
-                    Image(systemName: "timer")
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.appPrimary)
-                }
-                .buttonStyle(.plain)
-
-                Button(action: {
-                    print("Tapped")
-                }) {
-                    Image(systemName: "gearshape")
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.appPrimary)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding()
-            
+        headerSection
+        VStack {            
             if workouts.isEmpty {
                 Text("No workouts yet")
                     .foregroundColor(.secondary)
+                Spacer()
             } else {
                 List {
                     ForEach(workouts) { workout in
@@ -47,7 +32,7 @@ struct LogView: View {
                                     Label("Delete", systemImage: "trash")
                                 }
                             }
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                 Button {
                                     reuseWorkout(workout)
                                 } label: {
@@ -60,6 +45,17 @@ struct LogView: View {
                 .listStyle(PlainListStyle())
             }
         }
+    }
+
+    @ViewBuilder
+    private var headerSection: some View {
+        HStack {
+            Text("Logged Workouts")
+                .font(.largeTitle)
+                .bold()
+            Spacer()
+        }
+        .padding(.horizontal)
     }
     
     private func reuseWorkout(_ completedWorkout: Workout) {
