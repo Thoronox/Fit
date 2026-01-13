@@ -119,30 +119,35 @@ func formatWorkoutHistoryForAI(_ workoutHistory: [WorkoutHistoryItem]) -> String
     var output = "WORKOUT HISTORY (Last \(workoutHistory.count) workouts):\n\n"
     
     for (index, workout) in workoutHistory.enumerated() {
-        output += "=== WORKOUT \(index + 1) ===\n"
-        output += "Name: \(workout.workoutName)\n"
+        output += "WORKOUT\n"
+        //output += "Name: \(workout.workoutName)\n"
         output += "Date: \(dateFormatter.string(from: workout.workoutDate))\n"
-        output += "Total Volume: \(String(format: "%.1f", workout.totalVolume)) kg\n"
-        output += "Total Sets: \(workout.totalSets)\n"
-        
-        if let duration = workout.duration {
-            let minutes = Int(duration / 60)
-            output += "Duration: \(minutes) minutes\n"
-        }
+        //output += "Total Volume: \(String(format: "%.1f", workout.totalVolume)) kg\n"
+        //output += "Total Sets: \(workout.totalSets)\n"
+    
+        // if let duration = workout.duration {
+        //    let minutes = Int(duration / 60)
+        //    output += "Duration: \(minutes) minutes\n"
+        //}
         
         output += "\nExercises:\n"
         
+        var count = 0
         for exercise in workout.exercises {
             output += "  • \(exercise.exerciseName)\n"
-            output += "    Sets: \(exercise.sets.count), Total Volume: \(String(format: "%.1f", exercise.totalVolume)) kg\n"
-            output += "    Max Weight: \(String(format: "%.1f", exercise.maxWeight)) kg, Estimated 1RM: \(String(format: "%.1f", exercise.oneRepMax)) kg\n"
-            
+            // output += "    Sets: \(exercise.sets.count), Total Volume: \(String(format: "%.1f", exercise.totalVolume)) kg\n"
+            // output += "    Max Weight: \(String(format: "%.1f", exercise.maxWeight)) kg, Estimated 1RM: \(String(format: "%.1f", exercise.oneRepMax)) kg\n"
+            output += "    Estimated 1RM: \(String(format: "%.0f", exercise.oneRepMax)) kg\n"
+
             // Show individual sets
             for set in exercise.sets where set.isCompleted {
-                let rpeText = set.rpe != nil ? ", RPE: \(String(format: "%.1f", set.rpe!))" : ""
-                output += "      Set \(set.setNumber): \(String(format: "%.1f", set.weight)) kg × \(set.reps) reps\(rpeText)\n"
+                let rpeText = set.rpe != nil ? ", RPE: \(String(format: "%.0f", set.rpe!))" : ""
+                output += "      Set \(set.setNumber): \(String(format: "%.0f", set.weight)) kg × \(set.reps) reps\(rpeText)\n"
             }
             output += "\n"
+            count += 1
+            if count >= 10 { break  // Limit to 10 exercises per workout for brevity
+            }
         }
         
         output += "\n"

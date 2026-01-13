@@ -232,7 +232,7 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .tint(.red)
         }
         .padding()
         .background(Color(.systemGray6).opacity(0.5))

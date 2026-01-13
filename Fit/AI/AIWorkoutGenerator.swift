@@ -6,7 +6,7 @@ import os.log
 // MARK: - Configuration
 
 private enum AIServiceConstants {
-    static let requestTimeout: TimeInterval = 60
+    static let requestTimeout: TimeInterval = 120
     static let resourceTimeout: TimeInterval = 300
     static let minExercisesPerWorkout = 4
     static let maxExercisesPerWorkout = 8
@@ -126,7 +126,37 @@ extension AIWorkoutGeneratorService {
 }
 
 // MARK: - Prompt Builder
+struct WorkoutPromptBuilder {
+    let duration: String
+    let trainingType: String
+    let difficulty: String
+    let workoutSplit: String
+    let exercises: [Exercise]
+    let history: String
+    
+    private static let promptTemplate: String = {
+        guard let url = Bundle.main.url(forResource: "WorkoutPrompt", withExtension: "txt"),
+              let template = try? String(contentsOf: url, encoding: .utf8) else {
+            AppLogger.error(AppLogger.ai, "Failed to load WorkoutPrompt.txt")
+            fatalError("WorkoutPrompt.txt not found in bundle")
+        }
+        return template
+    }()
+    
+    func build() -> String {
+        let exercisesList = exercises.map { $0.name }.joined(separator: ", ")
+        
+        return Self.promptTemplate
+            .replacingOccurrences(of: "{{TRAINING_TYPE}}", with: trainingType)
+            .replacingOccurrences(of: "{{DIFFICULTY}}", with: difficulty)
+            .replacingOccurrences(of: "{{DURATION}}", with: duration)
+            .replacingOccurrences(of: "{{WORKOUT_SPLIT}}", with: workoutSplit)
+            .replacingOccurrences(of: "{{EXERCISES_LIST}}", with: exercisesList)
+            .replacingOccurrences(of: "{{WORKOUT_HISTORY}}", with: history)
+    }
+}
 
+/*
 struct WorkoutPromptBuilder {
     let duration: String
     let trainingType: String
@@ -248,7 +278,7 @@ struct WorkoutPromptBuilder {
         exercises.map { $0.name }.joined(separator: ", ")
     }
 }
-
+*/
 // MARK: - Gemini Service
 
 final class GeminiWorkoutGeneratorService: ObservableObject, AIWorkoutGeneratorService {
@@ -263,7 +293,7 @@ final class GeminiWorkoutGeneratorService: ObservableObject, AIWorkoutGeneratorS
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = AIServiceConstants.requestTimeout
         config.timeoutIntervalForResource = AIServiceConstants.resourceTimeout
-        return URLSession(configuration: config, delegate: TLSBypassDelegate(), delegateQueue: nil)
+        return URLSession(configuration: config)
     }()
     
     init(apiKey: String) {
