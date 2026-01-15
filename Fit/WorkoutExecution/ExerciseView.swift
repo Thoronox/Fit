@@ -75,7 +75,7 @@ struct ExerciseView: View {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .sheet(isPresented: $replaceExercise) {
+        .fullScreenCover(isPresented: $replaceExercise) {
             ExerciseSelectionView(selectedExercise: $selectedExercise)
         }
         .onChange(of: selectedExercise) { _, newExercise in

@@ -13,49 +13,22 @@ struct FitApp: App {
             UserProfile.self,
             OneRepMaxHistory.self
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false, cloudKitDatabase: .automatic)
         do {
             AppLogger.info(AppLogger.app, "Initializing SwiftData ModelContainer")
             
             let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
             let context = ModelContext(container)
-            
-            // Check if exercises exist, and delete them if none found
-            let exercises = try context.fetch(FetchDescriptor<Exercise>())
-            if exercises.isEmpty {
-                AppLogger.debug(AppLogger.app, "No exercises found, loading from JSON")
+
+            do {
                 try ExerciseLoader.loadExercisesFromJSON(context: context)
-            } else {
-                AppLogger.debug(AppLogger.app, "Found \(exercises.count) existing exercises")
+                AppLogger.info(AppLogger.app, "Exercises loaded successfully from JSON")
+                
+                try ExerciseLoader.createPredefinedWorkout(context: context)
+            } catch {
+                AppLogger.error(AppLogger.app, "Failed to load exercises from JSON", error: error)
             }
-            
-            // --- Add a sample predefined workout if not already present ---
-            let predefinedWorkouts = try context.fetch(FetchDescriptor<Workout>(predicate: #Predicate { $0.isPredefined == true }))
-            if predefinedWorkouts.isEmpty {
-                // Find some exercises to use in the sample workout
-                let sampleExercises = exercises.prefix(3)
-                if sampleExercises.count == 3 {
-                    let workout = Workout(
-                        name: "Full Body Starter",
-                        isPredefined: true,
-                        workoutDescription: "A simple full body workout for beginners.",
-                        difficulty: .beginner,
-                        tags: ["full body", "beginner"]
-                    )
-                    for (index, exercise) in sampleExercises.enumerated() {
-                        let workoutExercise = WorkoutExercise(exercise: exercise, order: index + 1)
-                        // Add a default set for each exercise
-                        let set = ExerciseSet(setNumber: 1, weight: 20, reps: 10)
-                        workoutExercise.sets.append(set)
-                        workout.exercises.append(workoutExercise)
-                    }
-                    context.insert(workout)
-                    try context.save()
-                    AppLogger.info(AppLogger.app, "Sample predefined workout created.")
-                } else {
-                    AppLogger.fault(AppLogger.app, "Not enough exercises to create sample predefined workout.")
-                }
-            }
+
             AppLogger.debug(AppLogger.app, "ModelContainer created successfully")
             return container
           } catch {

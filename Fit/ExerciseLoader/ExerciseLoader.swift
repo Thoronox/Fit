@@ -14,6 +14,68 @@ struct ExerciseData: Codable {
 }
 
 class ExerciseLoader {
+    static func createPredefinedWorkout(context: ModelContext) throws {
+        // --- Add or update sample predefined workout ---
+        let exercises = try context.fetch(FetchDescriptor<Exercise>())
+        let predefinedWorkouts = try context.fetch(FetchDescriptor<Workout>(predicate: #Predicate { $0.isPredefined == true && $0.name == "Full Body Starter" }))
+        
+        // Find specific exercises to use in the sample workout
+        let exerciseNames = [
+            "Incline Dumbbell Bench Press",
+            "Goblet Squat",
+            "Pull-up",
+            "Dumbbell Romanian Deadlift",
+            "Barbell Row",
+            "Dumbbell Lateral Raise"
+        ]
+        
+        let sampleExercises = exerciseNames.compactMap { name in
+            exercises.first { $0.name == name }
+        }
+        
+        if sampleExercises.count == exerciseNames.count {
+            let workout: Workout
+            
+            if let existingWorkout = predefinedWorkouts.first {
+                // Update existing workout
+                workout = existingWorkout
+                workout.workoutDescription = "A simple full body workout for beginners."
+                workout.difficulty = .beginner
+                workout.tags = ["full body", "beginner"]
+                
+                // Clear existing exercises
+                workout.exercises.removeAll()
+                AppLogger.info(AppLogger.app, "Updating existing predefined workout.")
+            } else {
+                // Create new workout
+                workout = Workout(
+                    name: "Full Body Starter",
+                    isPredefined: true,
+                    workoutDescription: "A simple full body workout for beginners.",
+                    difficulty: .beginner,
+                    tags: ["full body", "beginner"]
+                )
+                context.insert(workout)
+                AppLogger.info(AppLogger.app, "Creating new predefined workout.")
+            }
+            
+            // Add exercises and sets
+            for (index, exercise) in sampleExercises.enumerated() {
+                let workoutExercise = WorkoutExercise(exercise: exercise, order: index + 1)
+                // Add 3 sets for each exercise
+                for setNumber in 1...3 {
+                    let set = ExerciseSet(setNumber: setNumber, weight: 20, reps: 10)
+                    workoutExercise.sets.append(set)
+                }
+                workout.exercises.append(workoutExercise)
+            }
+            
+            try context.save()
+            AppLogger.info(AppLogger.app, "Sample predefined workout saved.")
+        } else {
+            AppLogger.fault(AppLogger.app, "Not all required exercises found to create sample predefined workout.")
+        }
+    }
     
     /// Loads exercises from the JSON file and creates/updates Exercise objects
     /// - Parameter context: The ModelContext to insert/update the exercises
@@ -148,39 +210,4 @@ enum ExerciseLoaderError: Error, LocalizedError {
     }
 }
 
-/*
-// MARK: - Alternative: Load without inserting into context
-extension ExerciseLoader {
-    
-    /// Loads exercises from JSON without inserting them into a ModelContext
-    /// Useful if you want to process the data before saving
-    static func loadExerciseDataFromJSON() throws -> [Exercise] {
-        guard let url = Bundle.main.url(forResource: "paste-2", withExtension: "json") else {
-            throw ExerciseLoaderError.fileNotFound
-        }
-        
-        let data = try Data(contentsOf: url)
-        let exerciseDataArray = try JSONDecoder().decode([ExerciseData].self, from: data)
-        
-        return exerciseDataArray.map { createExercise(from: $0) }
-    }
-    
-    /// Batch insert exercises with better error handling
-    static func loadAndInsertExercises(context: ModelContext) throws {
-        let exercises = try loadExerciseDataFromJSON()
-        
-        // Check if exercises already exist to avoid duplicates
-        let descriptor = FetchDescriptor<Exercise>()
-        let existingExercises = try context.fetch(descriptor)
-        let existingNames = Set(existingExercises.map { $0.name })
-        
-        let newExercises = exercises.filter { !existingNames.contains($0.name) }
-        
-        for exercise in newExercises {
-            context.insert(exercise)
-        }
-        
-        try context.save()
-    }
-}
-*/
+

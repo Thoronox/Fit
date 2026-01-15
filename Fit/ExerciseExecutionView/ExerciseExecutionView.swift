@@ -27,6 +27,7 @@ struct ExerciseExecutionView: View {
                 setsScroll
                 bottomButtons
             }
+            .background(Color.black)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -38,13 +39,15 @@ struct ExerciseExecutionView: View {
                     }
                 }
             }
-            .background(Color.black)
         }
+        .presentationDetents([.large]) 
         .onAppear {
             setupInitialState()
+            /*
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 focusedField = .reps(index: currentSetIndex)
             }
+             */
         }
         .sheet(isPresented: $showPauseTimer) {
             ExercisePauseView(restTime: workoutExercise.restTime)
@@ -317,6 +320,7 @@ fileprivate struct RepsTextField: View {
 
     var body: some View {
         TextField("6", text: $textValue)
+            .keyboardType(.numbersAndPunctuation)
             .focused($focusedField, equals: .reps(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
             .multilineTextAlignment(.center)
@@ -369,6 +373,7 @@ fileprivate struct WeightTextField: View {
 
     var body: some View {
         TextField("14", text: $textValue)
+            .keyboardType(.numbersAndPunctuation)
             .focused($focusedField, equals: .weight(index: index))
             .font(.system(size: 24, weight: .bold, design: .default))
             .multilineTextAlignment(.center)

@@ -288,5 +288,15 @@
     "equipment": "Barbell",
     "exerciseType": "Strength",
     "isCompound": true
-  }
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440030",
+    "name": "Dumbbell Tricep Extension",
+    "instructions": "Stand or sit holding a dumbbell with both hands, arms extended overhead. Keep your elbows close to your head and pointed forward. Lower the dumbbell behind your head by bending at the elbows, then extend your arms back to the starting position.",
+    "primaryMuscleGroup": "Triceps",
+    "secondaryMuscleGroups": [],
+    "equipment": "Dumbbells",
+    "exerciseType": "Strength",
+    "isCompound": false
+  }ä3
 ]

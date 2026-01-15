@@ -84,6 +84,7 @@ struct SettingsView: View {
                     )
                     
                     Spacer()
+                    
                 }
                 .padding()
             }
@@ -325,7 +326,7 @@ struct SettingsView: View {
             }
         }
     }
-    
+
     // MARK: - Delete Functionality
     private func deleteAllData() {
         do {

@@ -60,10 +60,10 @@ struct WorkoutView: View {
                 currentWorkout = workout
             }
         }
-        .sheet(item: $selectedWorkoutExercise) { workoutExercise in
+        .fullScreenCover(item: $selectedWorkoutExercise) { workoutExercise in
             ExerciseExecutionView(workoutExercise: workoutExercise, readonly: true)
         }
-        .sheet(isPresented: $showPredefinedSheet) {
+        .fullScreenCover(isPresented: $showPredefinedSheet) {
             PredefinedWorkoutListView(
                 workouts: predefinedWorkouts,
                 onSelect: { selected in
@@ -132,7 +132,7 @@ struct WorkoutView: View {
                     Spacer()
                 }
             } else {
-                ProgressView("Loading new workout...")
+                ProgressView("Loading new workout from \(selectedProvider == .chatGPT ? "ChatGPT" : "Gemini")...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         } else {

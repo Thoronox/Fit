@@ -114,10 +114,10 @@ struct StartWorkoutView: View {
         } message: {
             Text("Are you sure you want to leave the workout without saving your progress?")
         }
-        .sheet(item: $selectedWorkoutExercise) { workoutExercise in
+        .fullScreenCover(item: $selectedWorkoutExercise) { workoutExercise in
             ExerciseExecutionView(workoutExercise: workoutExercise, readonly: false)
         }
-        .sheet(isPresented: $showAddExercise) {
+        .fullScreenCover(isPresented: $showAddExercise) {
             ExerciseSelectionView(selectedExercise: $selectedExercise)
         }
         .onChange(of: selectedExercise) { _, newExercise in

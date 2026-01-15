@@ -118,7 +118,7 @@ func formatWorkoutHistoryForAI(_ workoutHistory: [WorkoutHistoryItem]) -> String
     
     var output = "WORKOUT HISTORY (Last \(workoutHistory.count) workouts):\n\n"
     
-    for (index, workout) in workoutHistory.enumerated() {
+    for (_, workout) in workoutHistory.enumerated() {
         output += "WORKOUT\n"
         //output += "Name: \(workout.workoutName)\n"
         output += "Date: \(dateFormatter.string(from: workout.workoutDate))\n"
